@@ -1,0 +1,19 @@
+using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
+
+namespace Dusharp;
+
+public sealed class UnionCaseInfo
+{
+	public string Name { get; }
+
+	public IReadOnlyList<UnionCaseParameterInfo> Parameters { get; }
+
+	public bool HasParameters => Parameters.Count > 0;
+
+	public UnionCaseInfo(string name, IReadOnlyList<UnionCaseParameterInfo> parameters)
+	{
+		Name = name;
+		Parameters = parameters;
+	}
+}

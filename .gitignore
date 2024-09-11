@@ -1,0 +1,12 @@
+﻿bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.vs
+.idea
+.nuke/temp
+*.db
+*.db-shm
+*.db-wal
+!MarketHistory.Db

@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{AD98FAC7-AE29-4AD2-B34A-5C524376C804}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		global.json = global.json
+		LICENSE = LICENSE
+		README.md = README.md
+		Rules.ruleset = Rules.ruleset
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3DA8FA83-7B0C-4DCB-A62C-E3C3A74B7C71}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{8CF0A092-053F-4093-B536-F50D8F234B54}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp", "src\Dusharp\Dusharp.csproj", "{6BE4037C-B7AB-4863-BB5F-F097E85BDD70}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.Tests", "tests\Dusharp.Tests\Dusharp.Tests.csproj", "{467C00F7-E35B-4183-9DE8-23F3A49BF5A4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6BE4037C-B7AB-4863-BB5F-F097E85BDD70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BE4037C-B7AB-4863-BB5F-F097E85BDD70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BE4037C-B7AB-4863-BB5F-F097E85BDD70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BE4037C-B7AB-4863-BB5F-F097E85BDD70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{467C00F7-E35B-4183-9DE8-23F3A49BF5A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{467C00F7-E35B-4183-9DE8-23F3A49BF5A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{467C00F7-E35B-4183-9DE8-23F3A49BF5A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{467C00F7-E35B-4183-9DE8-23F3A49BF5A4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6BE4037C-B7AB-4863-BB5F-F097E85BDD70} = {3DA8FA83-7B0C-4DCB-A62C-E3C3A74B7C71}
+		{467C00F7-E35B-4183-9DE8-23F3A49BF5A4} = {8CF0A092-053F-4093-B536-F50D8F234B54}
+	EndGlobalSection
+EndGlobal

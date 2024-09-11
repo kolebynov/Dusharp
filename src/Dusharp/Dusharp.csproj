@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<Version>0.1.0</Version>
+		<ImplicitUsings>false</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="UnionAttribute.cs" />
+		<EmbeddedResource Include="UnionCaseAttribute.cs" />
+		<EmbeddedResource Include="ExceptionUtils.cs" />
+	</ItemGroup>
+
+</Project>
