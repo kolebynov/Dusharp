@@ -1,5 +1,7 @@
 # Dusharp
 
+[![NuGet](https://img.shields.io/nuget/v/Dusharp)](https://www.nuget.org/packages/Dusharp/)
+
 **Dusharp** is a C# source generator for creating **discriminated unions**. This library allows you to define union types with ease, using attributes and partial methods. It is inspired by functional languages but built for C# developers.
 
 ## Features
@@ -57,8 +59,8 @@ You can easily perform pattern matching on a union using the `Match` method. The
 Shape shape = Shape.Circle(5.0);
 
 string result = shape.Match(
-    circle => $"Circle with radius {circle.Radius}",
-    rectangle => $"Rectangle with width {rectangle.Width} and height {rectangle.Height}"
+    radius => $"Circle with radius {radius}",
+    (width, height) => $"Rectangle with width {width} and height {height}"
 );
 
 Console.WriteLine(result); // Output: Circle with radius 5.0

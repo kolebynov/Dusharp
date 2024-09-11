@@ -5,6 +5,17 @@
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<Version>0.1.0</Version>
 		<ImplicitUsings>false</ImplicitUsings>
+		<Authors>Vitali Kolebyanov</Authors>
+		<Description>Dusharp is a C# source generator for creating discriminated unions.</Description>
+		<RepositoryUrl>https://github.com/kolebynov/Dusharp</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/kolebynov/Dusharp</PackageProjectUrl>
+		<PackageTags>DU;SourceGenerator;Discriminated unions</PackageTags>
+		<IsPackable>True</IsPackable>
+		<IsRoslynComponent>true</IsRoslynComponent>
+		<PackageId>Dusharp</PackageId>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -15,6 +26,10 @@
 		<EmbeddedResource Include="UnionAttribute.cs" />
 		<EmbeddedResource Include="UnionCaseAttribute.cs" />
 		<EmbeddedResource Include="ExceptionUtils.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false" />
 	</ItemGroup>
 
 </Project>
