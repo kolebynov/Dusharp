@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Dusharp.Tests
 {
-	public class UnionTests
+	public class MatchTests
 	{
 		[Fact]
 		public void Match_IfOneOfHandlerIsNull_ThrowsArgumentNullException()
@@ -119,19 +119,6 @@ namespace Dusharp.Tests
 				.Should().Be("0 value 2", "Invalid handler invoked");
 			union3.Match("0", st => st, (st, v1, v2) => $"{st} {v1} {v2}", (st, v1) => $"{st} {v1}")
 				.Should().Be("0 value", "Invalid handler invoked");
-		}
-
-		[Fact]
-		public void New_ForCaseWithoutParameters_ReturnTheSameInstance()
-		{
-			// Arrange
-
-			var union1 = TestUnion.Case1();
-			var union2 = TestUnion.Case1();
-
-			// Assert
-
-			object.ReferenceEquals(union1, union2).Should().BeTrue();
 		}
 	}
 }
