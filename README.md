@@ -8,8 +8,8 @@
 
 - ✅ **Create unions**: Define discriminated unions using attributes.
 - ✅ **Match method**: Pattern match on union cases in a type-safe way.
+- ✅ **Equality**: Automatic equality comparison for unions.
 - ❌ **Pretty print**: Using overloaded `ToString()` (coming soon).
-- ❌ **Equality**: Automatic equality comparison for unions (coming soon).
 - ❌ **JSON serialization/deserialization**: Support for unions with `System.Text.Json` (coming soon).
 - ❌ **Struct unions**: With efficient memory layout for unions as structs (coming soon).
 
@@ -66,9 +66,18 @@ string result = shape.Match(
 Console.WriteLine(result); // Output: Circle with radius 5.0
 ```
 
+### 4. Compare Unions
+Union cases can be compared for equality using the auto-generated equality methods. This allows for checking if two unions are the same.
+
+```csharp
+Shape shape1 = Shape.Circle(5.0);
+Shape shape2 = Shape.Circle(5.0);
+
+bool areEqual = shape1.Equals(shape2); // true
+```
+
 ## Upcoming Features
 - **Pretty printing**: A default ToString() implementation for unions that provides a readable representation of union cases.
-- **Equality**: Automatic equality comparison for union cases.
 - **JSON serialization/deserialization**: Support for JSON (de)serialization via System.Text.Json.
 - **Struct unions**: More efficient unions using structs with effective data layout.
 
