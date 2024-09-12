@@ -12,6 +12,15 @@ public static class CodeWritingUtils
 		return codeWriter;
 	}
 
+	public static void WriteSuppressWarning(this CodeWriter codeWriter, string checkId,
+		string justification, bool useAttribute = true)
+	{
+		codeWriter.AppendLine(
+			useAttribute
+				? $"[System.Diagnostics.CodeAnalysis.SuppressMessage(\"\", \"{checkId}\", Justification = \"{justification}\")]"
+				: $"#pragma warning disable {checkId} // {justification}");
+	}
+
 	private static void WriteOuterBlocks(INamedTypeSymbol typeSymbol, CodeWriter codeWriter,
 		Action<CodeWriter> innerBlockWriter)
 	{

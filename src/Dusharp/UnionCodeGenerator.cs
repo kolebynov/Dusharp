@@ -21,7 +21,9 @@ public static class UnionCodeGenerator
 			unionInfo.TypeSymbol,
 			innerBlock =>
 			{
-				innerBlock.AppendLine("[System.Diagnostics.CodeAnalysis.SuppressMessage(\"Design\", \"CA1067\", Justification = \"Equals overriden in derived classes.\")]");
+				innerBlock.WriteSuppressWarning("CS0660, CS0661", "Equals overriden in derived classes.", false);
+				innerBlock.WriteSuppressWarning("CA1067", "Equals overriden in derived classes.");
+
 				innerBlock.AppendLine($"abstract partial class {unionInfo.Name} : System.IEquatable<{unionInfo.Name}>");
 				using var unionBodyBlock = innerBlock.NewBlock();
 				unionBodyBlock.AppendLine($"private {unionInfo.Name}() {{}}");
@@ -34,6 +36,8 @@ public static class UnionCodeGenerator
 
 				unionBodyBlock.AppendLine($"public abstract bool Equals({unionInfo.Name} other);");
 
+				WriteEqualityOperators(unionInfo, unionBodyBlock);
+
 				foreach (var caseMethodSymbol in unionInfo.Cases)
 				{
 					WriteUnionCase(caseMethodSymbol, unionInfo, unionBodyBlock);
@@ -41,43 +45,6 @@ public static class UnionCodeGenerator
 			});
 
 		return codeWriter.ToString();
-	}
-
-	private static void WriteUnionCase(UnionCaseInfo unionCase, UnionInfo union, CodeWriter unionBodyBlock)
-	{
-		var caseClassName = GetClassName(unionCase);
-		unionBodyBlock.AppendLine($"private sealed class {caseClassName} : {union.Name}");
-		var caseParametersString = string.Join(", ", unionCase.Parameters.Select(x => $"{x.TypeName} {x.Name}"));
-		using (var caseClassBlock = unionBodyBlock.NewBlock())
-		{
-			foreach (var caseParameter in unionCase.Parameters)
-			{
-				caseClassBlock.AppendLine($"public readonly {caseParameter.TypeName} {caseParameter.Name};");
-			}
-
-			if (!unionCase.HasParameters)
-			{
-				caseClassBlock.AppendLine(
-					$"public static readonly {caseClassName} Instance = new {caseClassName}();");
-			}
-
-			caseClassBlock.AppendLine($"public {caseClassName}({caseParametersString})");
-			using (var ctorBlock = caseClassBlock.NewBlock())
-			{
-				foreach (var caseParameter in unionCase.Parameters)
-				{
-					ctorBlock.AppendLine($"this.{caseParameter.Name} = {caseParameter.Name};");
-				}
-			}
-
-			WriteUnionCaseEqualsMethods(unionCase, union, caseClassBlock);
-		}
-
-		unionBodyBlock.AppendLine($"public static partial {union.Name} {unionCase.Name}({caseParametersString})");
-		using var methodBlock = unionBodyBlock.NewBlock();
-		methodBlock.AppendLine(unionCase.HasParameters
-			? $"return new {caseClassName}({string.Join(", ", unionCase.Parameters.Select(x => x.Name))});"
-			: $"return {caseClassName}.Instance;");
 	}
 
 	private static void WriteMatchMethod(UnionInfo union, CodeWriter unionBodyBlock,
@@ -126,6 +93,60 @@ public static class UnionCodeGenerator
 		}
 	}
 
+	private static void WriteEqualityOperators(UnionInfo union, CodeWriter unionBodyBlock)
+	{
+		unionBodyBlock.AppendLine($"public static bool operator ==({union.Name} left, {union.Name} right)");
+		using (var operatorBodyBlock = unionBodyBlock.NewBlock())
+		{
+			operatorBodyBlock.AppendLine(
+				"return !object.ReferenceEquals(left, null) ? left.Equals(right) : object.ReferenceEquals(left, right);");
+		}
+
+		unionBodyBlock.AppendLine($"public static bool operator !=({union.Name} left, {union.Name} right)");
+		using (var operatorBodyBlock = unionBodyBlock.NewBlock())
+		{
+			operatorBodyBlock.AppendLine(
+				"return !object.ReferenceEquals(left, null) ? !left.Equals(right) : !object.ReferenceEquals(left, right);");
+		}
+	}
+
+	private static void WriteUnionCase(UnionCaseInfo unionCase, UnionInfo union, CodeWriter unionBodyBlock)
+	{
+		var caseClassName = GetClassName(unionCase);
+		unionBodyBlock.AppendLine($"private sealed class {caseClassName} : {union.Name}");
+		var caseParametersString = string.Join(", ", unionCase.Parameters.Select(x => $"{x.TypeName} {x.Name}"));
+		using (var caseClassBlock = unionBodyBlock.NewBlock())
+		{
+			foreach (var caseParameter in unionCase.Parameters)
+			{
+				caseClassBlock.AppendLine($"public readonly {caseParameter.TypeName} {caseParameter.Name};");
+			}
+
+			if (!unionCase.HasParameters)
+			{
+				caseClassBlock.AppendLine(
+					$"public static readonly {caseClassName} Instance = new {caseClassName}();");
+			}
+
+			caseClassBlock.AppendLine($"public {caseClassName}({caseParametersString})");
+			using (var ctorBlock = caseClassBlock.NewBlock())
+			{
+				foreach (var caseParameter in unionCase.Parameters)
+				{
+					ctorBlock.AppendLine($"this.{caseParameter.Name} = {caseParameter.Name};");
+				}
+			}
+
+			WriteUnionCaseEqualsMethods(unionCase, union, caseClassBlock);
+		}
+
+		unionBodyBlock.AppendLine($"public static partial {union.Name} {unionCase.Name}({caseParametersString})");
+		using var methodBlock = unionBodyBlock.NewBlock();
+		methodBlock.AppendLine(unionCase.HasParameters
+			? $"return new {caseClassName}({string.Join(", ", unionCase.Parameters.Select(x => x.Name))});"
+			: $"return {caseClassName}.Instance;");
+	}
+
 	private static void WriteUnionCaseEqualsMethods(UnionCaseInfo unionCase, UnionInfo union, CodeWriter caseClassBlock)
 	{
 		const string structuralEqualsMethod = "StructuralEquals";
@@ -150,7 +171,7 @@ public static class UnionCodeGenerator
 					.Select(x =>
 						$"System.Collections.Generic.EqualityComparer<{x.TypeName}>.Default.GetHashCode({x.Name})")
 					.Append(caseNameHashCode);
-				methodBodyBlock.AppendLine($"return {string.Join(" * -1521134295 + ", hashCodes)};");
+				methodBodyBlock.AppendLine($"unchecked {{ return {string.Join(" * -1521134295 + ", hashCodes)}; }}");
 			}
 		}
 
