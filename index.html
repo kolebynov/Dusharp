@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Dusharp - C# Source Generator for Discriminated Unions</title>
+    <meta name="description"
+        content="Dusharp is a C# source generator for creating discriminated unions. This library allows you to define union types with ease, using attributes and partial methods. It is inspired by functional languages but built for C# developers.">
+    <meta name="keywords"
+        content="C#, source generator, discriminated unions, union types, functional programming, union">
+    <meta name="google-site-verification" content="bGt_LBxaYwMZ-BNDHNtD3Hqxdv2RVkqGc033FxG6C5c" />
+</head>
+
+<body>
+    <h1 id="dusharp">Dusharp</h1>
+    <p><a href="https://www.nuget.org/packages/Dusharp/"><img src="https://img.shields.io/nuget/v/Dusharp"
+                alt="NuGet"></a>
+    </p>
+    <p><a href="https://github.com/kolebynov/Dusharp"><strong>Dusharp</strong></a> is a C# source generator for creating
+        <strong>discriminated unions</strong>. This
+        library
+        allows you to define union types with ease, using attributes and partial methods. It is inspired by functional
+        languages but built for C# developers.
+    </p>
+    <h2 id="features">Features</h2>
+    <ul>
+        <li>✅ <strong>Create unions</strong>: Define discriminated unions using attributes.</li>
+        <li>✅ <strong>Match method</strong>: Pattern match on union cases in a type-safe way.</li>
+        <li>✅ <strong>Equality</strong>: Automatic equality comparison for unions.</li>
+        <li>❌ <strong>Pretty print</strong>: Using overloaded <code>ToString()</code> (coming soon).</li>
+        <li>❌ <strong>JSON serialization/deserialization</strong>: Support for unions with <code>System.Text.Json</code>
+            (coming soon).</li>
+        <li>❌ <strong>Struct unions</strong>: With efficient memory layout for unions as structs (coming soon).</li>
+    </ul>
+    <h2 id="installation">Installation</h2>
+    <p>Dusharp is available as a NuGet package. You can install it using the NuGet package manager:</p>
+    <pre><code class="lang-bash">dotnet add <span class="hljs-keyword">package</span> <span class="hljs-title">Dusharp</span>
+</code></pre>
+    <h2 id="usage">Usage</h2>
+    <p><code>Dusharp</code> uses attributes to generate discriminated unions and case methods. Here&#39;s how to get
+        started:</p>
+    <h3 id="1-define-a-union">1. Define a Union</h3>
+    <p>To define a union, annotate a class with the <code>[Dusharp.UnionAttribute]</code> attribute.</p>
+    <pre><code class="lang-csharp"><span class="hljs-keyword">using</span> Dusharp;
+
+[Union]
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">partial</span> <span class="hljs-keyword">class</span> <span class="hljs-title">Shape</span> { }
+</code></pre>
+    <h3 id="2-define-union-cases">2. Define Union Cases</h3>
+    <p>Define union cases by creating public static partial methods and marking them with the
+        <code>[Dusharp.UnionCaseAttribute]</code> attribute. The method body will be automatically generated.
+    </p>
+    <pre><code class="lang-csharp"><span class="hljs-keyword">using</span> Dusharp;
+
+[Union]
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">partial</span> <span class="hljs-keyword">class</span> <span class="hljs-title">Shape</span>
+{
+    [UnionCase]
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> Shape <span class="hljs-title">Circle</span>(<span class="hljs-params"><span class="hljs-keyword">double</span> radius</span>)</span>;
+
+    [UnionCase]
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> Shape <span class="hljs-title">Rectangle</span>(<span class="hljs-params"><span class="hljs-keyword">double</span> width, <span class="hljs-keyword">double</span> height</span>)</span>;
+}
+</code></pre>
+    <h3 id="3-match-on-union">3. Match on Union</h3>
+    <p>You can easily perform pattern matching on a union using the <code>Match</code> method. The source generator will
+        create the <code>Match</code> method based on the defined union cases.</p>
+    <pre><code class="lang-csharp"><span class="hljs-keyword">Shape </span><span class="hljs-keyword">shape </span>= <span class="hljs-keyword">Shape.Circle(5.0);
+</span>
+string result = <span class="hljs-keyword">shape.Match(
+</span>    radius =&gt; $<span class="hljs-string">"Circle with radius {radius}"</span>,
+    (width, height) =&gt; $<span class="hljs-string">"Rectangle with width {width} and height {height}"</span>
+)<span class="hljs-comment">;</span>
+
+Console.WriteLine(result)<span class="hljs-comment">; // Output: Circle with radius 5.0</span>
+</code></pre>
+    <h3 id="4-compare-unions">4. Compare Unions</h3>
+    <p>Union cases can be compared for equality using the auto-generated equality methods. This allows for checking if
+        two
+        unions are the same.</p>
+    <pre><code class="lang-csharp"><span class="hljs-built_in">Shape</span> shape1 = <span class="hljs-built_in">Shape</span>.Circle(<span class="hljs-number">5.0</span>);
+<span class="hljs-built_in">Shape</span> shape2 = <span class="hljs-built_in">Shape</span>.Circle(<span class="hljs-number">5.0</span>);
+
+bool areEqual = shape1.Equals(shape2); // true
+</code></pre>
+    <h2 id="upcoming-features">Upcoming Features</h2>
+    <ul>
+        <li><strong>Pretty printing</strong>: A default ToString() implementation for unions that provides a readable
+            representation of union cases.</li>
+        <li><strong>JSON serialization/deserialization</strong>: Support for JSON (de)serialization via
+            System.Text.Json.
+        </li>
+        <li><strong>Struct unions</strong>: More efficient unions using structs with effective data layout.</li>
+    </ul>
+    <h2 id="license">License</h2>
+    <p>This project is licensed under the MIT License - see the LICENSE file for details.</p>
+</body>
+
+</html>
