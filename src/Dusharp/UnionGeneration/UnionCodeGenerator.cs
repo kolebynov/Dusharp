@@ -1,7 +1,8 @@
 using System;
 using System.Linq;
+using Dusharp.CodeAnalyzing;
 
-namespace Dusharp;
+namespace Dusharp.UnionGeneration;
 
 public static class UnionCodeGenerator
 {
@@ -12,11 +13,11 @@ public static class UnionCodeGenerator
 
 	public static string? GenerateClassUnion(UnionInfo unionInfo)
 	{
-		if (unionInfo.Cases.Count == 0)
-		{
-			return null;
-		}
+		return unionInfo.Cases.Count == 0 ? null : GenerateClassUnionImpl(new UnionGenerationInfo(unionInfo));
+	}
 
+	private static string GenerateClassUnionImpl(UnionGenerationInfo unionInfo)
+	{
 		using var codeWriter = CodeWritingUtils.WriteOuterBlocks(
 			unionInfo.TypeSymbol,
 			innerBlock =>
@@ -47,22 +48,16 @@ public static class UnionCodeGenerator
 		return codeWriter.ToString();
 	}
 
-	private static void WriteMatchMethod(UnionInfo union, CodeWriter unionBodyBlock,
+	private static void WriteMatchMethod(UnionGenerationInfo union, CodeWriter unionBodyBlock,
 		MatchMethodBuilder methodBuilder)
 	{
 		var casesStrings = union.Cases
 			.Select(x =>
 			{
-				var caseTypeParameters = x.HasParameters
-					? $"{string.Join(",", x.Parameters.Select(y => y.TypeName))}"
-					: string.Empty;
-				var caseClassName = GetClassName(x);
-				var caseClassNameCamelCase = $"{char.ToLowerInvariant(caseClassName[0])}{caseClassName.AsSpan(1).ToString()}";
-				var matchHandlerParameterName = $"{caseClassNameCamelCase}Handler";
+				var matchHandlerParameterName = $"{x.ClassNameCamelCase}Handler";
 				return (
-					caseClassName,
 					matchHandlerParameterName,
-					matchHandlerParameter: $"{methodBuilder.MatchHandlerDelegateTypeProvider(caseTypeParameters)} {matchHandlerParameterName}");
+					matchHandlerParameter: $"{methodBuilder.MatchHandlerDelegateTypeProvider(x.ParameterTypes)} {matchHandlerParameterName}");
 			})
 			.ToArray();
 
@@ -71,16 +66,16 @@ public static class UnionCodeGenerator
 		unionBodyBlock.AppendLine($"public {methodBuilder.ReturnType} {methodBuilder.MethodName}({methodParameters})");
 		using var methodBlock = unionBodyBlock.NewBlock();
 
-		foreach (var (_, matchHandlerParameterName, _) in casesStrings)
+		foreach (var (matchHandlerParameterName, _) in casesStrings)
 		{
 			methodBlock.AppendLine($"{ThrowIfNullMethod}({matchHandlerParameterName}, \"{matchHandlerParameterName}\");");
 		}
 
 		methodBlock.AppendLine();
-		foreach (var ((caseClassName, matchHandlerParameterName, _), unionCase) in casesStrings.Zip(union.Cases, (x, y) => (x, y)))
+		foreach (var ((matchHandlerParameterName, _), unionCase) in casesStrings.Zip(union.Cases, (x, y) => (x, y)))
 		{
 			using var matchBlock = methodBlock.NewBlock();
-			matchBlock.AppendLine($"var unionCase = this as {caseClassName};");
+			matchBlock.AppendLine($"var unionCase = this as {unionCase.ClassName};");
 			var parametersString = string.Join(", ", unionCase.Parameters.Select(x => $"unionCase.{x.Name}"));
 			matchBlock.AppendLine(
 				$"if (!object.ReferenceEquals(unionCase, null)) {{ {methodBuilder.MatchBodyProvider(matchHandlerParameterName, parametersString)} }}");
@@ -93,7 +88,7 @@ public static class UnionCodeGenerator
 		}
 	}
 
-	private static void WriteEqualityOperators(UnionInfo union, CodeWriter unionBodyBlock)
+	private static void WriteEqualityOperators(UnionGenerationInfo union, CodeWriter unionBodyBlock)
 	{
 		unionBodyBlock.AppendLine($"public static bool operator ==({union.Name} left, {union.Name} right)");
 		using (var operatorBodyBlock = unionBodyBlock.NewBlock())
@@ -110,11 +105,9 @@ public static class UnionCodeGenerator
 		}
 	}
 
-	private static void WriteUnionCase(UnionCaseInfo unionCase, UnionInfo union, CodeWriter unionBodyBlock)
+	private static void WriteUnionCase(UnionCaseGenerationInfo unionCase, UnionGenerationInfo union, CodeWriter unionBodyBlock)
 	{
-		var caseClassName = GetClassName(unionCase);
-		unionBodyBlock.AppendLine($"private sealed class {caseClassName} : {union.Name}");
-		var caseParametersString = string.Join(", ", unionCase.Parameters.Select(x => $"{x.TypeName} {x.Name}"));
+		unionBodyBlock.AppendLine($"private sealed class {unionCase.ClassName} : {union.Name}");
 		using (var caseClassBlock = unionBodyBlock.NewBlock())
 		{
 			foreach (var caseParameter in unionCase.Parameters)
@@ -125,10 +118,10 @@ public static class UnionCodeGenerator
 			if (!unionCase.HasParameters)
 			{
 				caseClassBlock.AppendLine(
-					$"public static readonly {caseClassName} Instance = new {caseClassName}();");
+					$"public static readonly {unionCase.ClassName} Instance = new {unionCase.ClassName}();");
 			}
 
-			caseClassBlock.AppendLine($"public {caseClassName}({caseParametersString})");
+			caseClassBlock.AppendLine($"public {unionCase.ClassName}({unionCase.ParameterTypesAndNames})");
 			using (var ctorBlock = caseClassBlock.NewBlock())
 			{
 				foreach (var caseParameter in unionCase.Parameters)
@@ -140,14 +133,15 @@ public static class UnionCodeGenerator
 			WriteUnionCaseEqualsMethods(unionCase, union, caseClassBlock);
 		}
 
-		unionBodyBlock.AppendLine($"public static partial {union.Name} {unionCase.Name}({caseParametersString})");
+		unionBodyBlock.AppendLine($"public static partial {union.Name} {unionCase.Name}({unionCase.ParameterTypesAndNames})");
 		using var methodBlock = unionBodyBlock.NewBlock();
 		methodBlock.AppendLine(unionCase.HasParameters
-			? $"return new {caseClassName}({string.Join(", ", unionCase.Parameters.Select(x => x.Name))});"
-			: $"return {caseClassName}.Instance;");
+			? $"return new {unionCase.ClassName}({unionCase.ParameterNames});"
+			: $"return {unionCase.ClassName}.Instance;");
 	}
 
-	private static void WriteUnionCaseEqualsMethods(UnionCaseInfo unionCase, UnionInfo union, CodeWriter caseClassBlock)
+	private static void WriteUnionCaseEqualsMethods(UnionCaseGenerationInfo unionCase, UnionGenerationInfo union,
+		CodeWriter caseClassBlock)
 	{
 		const string structuralEqualsMethod = "StructuralEquals";
 
@@ -175,7 +169,7 @@ public static class UnionCodeGenerator
 			}
 		}
 
-		caseClassBlock.AppendLine($"private bool {structuralEqualsMethod}({GetClassName(unionCase)} other)");
+		caseClassBlock.AppendLine($"private bool {structuralEqualsMethod}({unionCase.ClassName} other)");
 		using (var methodBodyBlock = caseClassBlock.NewBlock())
 		{
 			if (!unionCase.HasParameters)
@@ -193,17 +187,15 @@ public static class UnionCodeGenerator
 
 		return;
 
-		static void WriteEqualsMethodBody(UnionCaseInfo unionCase, CodeWriter caseClassBlock)
+		static void WriteEqualsMethodBody(UnionCaseGenerationInfo unionCase, CodeWriter caseClassBlock)
 		{
 			using var methodBodyBlock = caseClassBlock.NewBlock();
 			methodBodyBlock.AppendLine("if (object.ReferenceEquals(this, other)) return true;");
-			methodBodyBlock.AppendLine($"var otherCasted = other as {GetClassName(unionCase)};");
+			methodBodyBlock.AppendLine($"var otherCasted = other as {unionCase.ClassName};");
 			methodBodyBlock.AppendLine("if (object.ReferenceEquals(otherCasted, null)) return false;");
 			methodBodyBlock.AppendLine($"return {structuralEqualsMethod}(otherCasted);");
 		}
 	}
-
-	private static string GetClassName(UnionCaseInfo unionCase) => $"{unionCase.Name}Case";
 
 	private sealed class MatchMethodBuilder
 	{

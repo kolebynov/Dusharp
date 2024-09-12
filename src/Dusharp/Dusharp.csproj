@@ -23,9 +23,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="UnionAttribute.cs" />
-		<EmbeddedResource Include="UnionCaseAttribute.cs" />
-		<EmbeddedResource Include="ExceptionUtils.cs" />
+		<EmbeddedResource Include="EmbeddedCode\*.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

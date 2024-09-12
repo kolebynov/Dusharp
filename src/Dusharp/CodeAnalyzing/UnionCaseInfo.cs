@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using Microsoft.CodeAnalysis;
 
-namespace Dusharp;
+namespace Dusharp.CodeAnalyzing;
 
 public sealed class UnionCaseInfo
 {

@@ -1,4 +1,4 @@
-namespace Dusharp;
+namespace Dusharp.CodeAnalyzing;
 
 public readonly struct UnionCaseParameterInfo
 {

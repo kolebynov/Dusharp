@@ -1,7 +1,7 @@
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace Dusharp;
+namespace Dusharp.CodeAnalyzing;
 
 public static class UnionInfoCollector
 {
