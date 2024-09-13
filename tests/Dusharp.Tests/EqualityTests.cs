@@ -10,8 +10,8 @@ namespace Dusharp.Tests
 		{
 			// Arrange and Act
 
-			var union1 = TestUnion.Case1();
-			var union2 = TestUnion.Case1();
+			var union1 = TestUnion<long>.Case1();
+			var union2 = TestUnion<long>.Case1();
 
 			// Assert
 
@@ -23,7 +23,7 @@ namespace Dusharp.Tests
 		{
 			// Arrange
 
-			var union1 = TestUnion.Case2("value", 1);
+			var union1 = TestUnion<long>.Case2("value", 1);
 
 			// Act and Assert
 
@@ -35,12 +35,16 @@ namespace Dusharp.Tests
 		{
 			// Arrange
 
-			var union1 = TestUnion.Case2("value", 1);
-			var union2 = TestUnion.Case2("value", 1);
+			var union1 = TestUnion<long>.Case2("value", 1);
+			var union2 = TestUnion<long>.Case2("value", 1);
+
+			var union3 = TestUnion<long>.Case4(10);
+			var union4 = TestUnion<long>.Case4(10);
 
 			// Act and Assert
 
 			union1.Equals(union2).Should().BeTrue();
+			union3.Equals(union4).Should().BeTrue();
 		}
 
 		[Fact]
@@ -48,9 +52,9 @@ namespace Dusharp.Tests
 		{
 			// Arrange
 
-			var union1 = TestUnion.Case2("value", 1);
-			var union2 = TestUnion.Case2("value", 2);
-			var union3 = TestUnion.Case2("value1", 1);
+			var union1 = TestUnion<long>.Case2("value", 1);
+			var union2 = TestUnion<long>.Case2("value", 2);
+			var union3 = TestUnion<long>.Case2("value1", 1);
 
 			// Act and Assert
 
@@ -64,8 +68,8 @@ namespace Dusharp.Tests
 		{
 			// Arrange
 
-			var union1 = TestUnion.Case2("value", 1);
-			var union2 = TestUnion.Case3("value");
+			var union1 = TestUnion<long>.Case2("value", 1);
+			var union2 = TestUnion<long>.Case3("value");
 
 			// Act and Assert
 
@@ -77,7 +81,7 @@ namespace Dusharp.Tests
 		{
 			// Arrange
 
-			var union1 = TestUnion.Case2("value", 1);
+			var union1 = TestUnion<long>.Case2("value", 1);
 
 			// Act and Assert
 
@@ -89,11 +93,11 @@ namespace Dusharp.Tests
 		{
 			// Arrange
 
-			var union1 = TestUnion.Case2("value", 1);
-			var union2 = TestUnion.Case2("value", 1);
-			var union3 = TestUnion.Case2("value", 2);
-			TestUnion? nullUnion1 = null;
-			TestUnion? nullUnion2 = null;
+			var union1 = TestUnion<long>.Case2("value", 1);
+			var union2 = TestUnion<long>.Case2("value", 1);
+			var union3 = TestUnion<long>.Case2("value", 2);
+			TestUnion<long>? nullUnion1 = null;
+			TestUnion<long>? nullUnion2 = null;
 
 			// Act and Assert
 
@@ -110,11 +114,11 @@ namespace Dusharp.Tests
 		{
 			// Arrange
 
-			var union1 = TestUnion.Case2("value", 1);
-			var union2 = TestUnion.Case2("value", 1);
-			var union3 = TestUnion.Case2("value", 2);
-			TestUnion? nullUnion1 = null;
-			TestUnion? nullUnion2 = null;
+			var union1 = TestUnion<long>.Case2("value", 1);
+			var union2 = TestUnion<long>.Case2("value", 1);
+			var union3 = TestUnion<long>.Case2("value", 2);
+			TestUnion<long>? nullUnion1 = null;
+			TestUnion<long>? nullUnion2 = null;
 
 			// Act and Assert
 

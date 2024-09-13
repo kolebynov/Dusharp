@@ -9,6 +9,7 @@
 - ✅ **Create unions**: Define discriminated unions using attributes.
 - ✅ **Match method**: Pattern match on union cases in a type-safe way.
 - ✅ **Equality**: Automatic equality comparison for unions.
+- ✅ **Generics**: Generics support for union types.
 - ❌ **Pretty print**: Using overloaded `ToString()` (coming soon).
 - ❌ **JSON serialization/deserialization**: Support for unions with `System.Text.Json` (coming soon).
 - ❌ **Struct unions**: With efficient memory layout for unions as structs (coming soon).
@@ -32,7 +33,10 @@ To define a union, annotate a class with the `[Dusharp.UnionAttribute]` attribut
 using Dusharp;
 
 [Union]
-public partial class Shape { }
+public partial class Shape<T>
+    where T : struct, INumber<T>
+{
+}
 ```
 
 ### 2. Define Union Cases
@@ -42,13 +46,14 @@ Define union cases by creating public static partial methods and marking them wi
 using Dusharp;
 
 [Union]
-public partial class Shape
+public partial class Shape<T>
+    where T : struct, INumber<T>
 {
     [UnionCase]
-    public static partial Shape Circle(double radius);
+    public static partial Shape<T> Circle(T radius);
 
     [UnionCase]
-    public static partial Shape Rectangle(double width, double height);
+    public static partial Shape<T> Rectangle(T width, T height);
 }
 ```
 
@@ -56,12 +61,11 @@ public partial class Shape
 You can easily perform pattern matching on a union using the `Match` method. The source generator will create the `Match` method based on the defined union cases.
 
 ```csharp
-Shape shape = Shape.Circle(5.0);
+Shape<double> shape = Shape<double>.Circle(5.0);
 
 string result = shape.Match(
     radius => $"Circle with radius {radius}",
-    (width, height) => $"Rectangle with width {width} and height {height}"
-);
+    (width, height) => $"Rectangle with width {width} and height {height}");
 
 Console.WriteLine(result); // Output: Circle with radius 5.0
 ```
@@ -70,10 +74,11 @@ Console.WriteLine(result); // Output: Circle with radius 5.0
 Union cases can be compared for equality using the auto-generated equality methods. This allows for checking if two unions are the same.
 
 ```csharp
-Shape shape1 = Shape.Circle(5.0);
-Shape shape2 = Shape.Circle(5.0);
+Shape<double> shape1 = Shape<double>.Circle(5.0);
+Shape<double> shape2 = Shape<double>.Circle(5.0);
 
-bool areEqual = shape1.Equals(shape2); // true
+Console.WriteLine(shape1.Equals(shape2)); // True
+Console.WriteLine(shape1 == shape2); // True
 ```
 
 ## Upcoming Features

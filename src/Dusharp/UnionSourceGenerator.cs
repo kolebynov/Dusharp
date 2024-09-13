@@ -42,7 +42,8 @@ public sealed class UnionSourceGenerator : IIncrementalGenerator
 			var unionCode = UnionCodeGenerator.GenerateClassUnion(unionInfo);
 			if (unionCode != null)
 			{
-				ctx.AddSource($"{typeSymbol}.Union.g.cs", unionCode);
+				var typeFileName = typeSymbol.ToDisplayString().Replace('<', '(').Replace('>', ')');
+				ctx.AddSource($"{typeFileName}.Dusharp.g.cs", unionCode);
 			}
 		});
 	}

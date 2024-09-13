@@ -9,12 +9,16 @@ public sealed class UnionInfo
 
 	public IReadOnlyList<UnionCaseInfo> Cases { get; }
 
+	public IReadOnlyList<string> GenericParameters { get; }
+
 	public INamedTypeSymbol TypeSymbol { get; }
 
-	public UnionInfo(string name, IReadOnlyList<UnionCaseInfo> cases, INamedTypeSymbol typeSymbol)
+	public UnionInfo(string name, IReadOnlyList<UnionCaseInfo> cases, IReadOnlyList<string> genericParameters,
+		INamedTypeSymbol typeSymbol)
 	{
 		Name = name;
 		Cases = cases;
+		GenericParameters = genericParameters;
 		TypeSymbol = typeSymbol;
 	}
 }

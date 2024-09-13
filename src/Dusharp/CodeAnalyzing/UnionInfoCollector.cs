@@ -18,6 +18,10 @@ public static class UnionInfoCollector
 				x.Parameters.Select(y => new UnionCaseParameterInfo(y.Name, y.Type.ToString())).ToArray()))
 			.ToArray();
 
-		return new UnionInfo(unionClassSymbol.Name, unionCases, unionClassSymbol);
+		var genericParameters = unionClassSymbol.TypeParameters
+			.Select(x => x.Name)
+			.ToArray();
+
+		return new UnionInfo(unionClassSymbol.Name, unionCases, genericParameters, unionClassSymbol);
 	}
 }

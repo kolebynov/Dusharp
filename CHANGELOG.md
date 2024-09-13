@@ -1,3 +1,8 @@
+v0.3.0
+------
+
+- Add generic support for unions
+
 v0.2.0
 ------
 

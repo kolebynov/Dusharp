@@ -2,15 +2,18 @@ namespace Dusharp.Tests
 {
 	[Union]
 #pragma warning disable CS0660, CS0661 // Equals overriden in derived classes.
-	public partial class TestUnion
+	public partial class TestUnion<T>
 	{
 		[UnionCase]
-		public static partial TestUnion Case1();
+		public static partial TestUnion<T> Case1();
 
 		[UnionCase]
-		public static partial TestUnion Case2(string value1, int value2);
+		public static partial TestUnion<T> Case2(string value1, int value2);
 
 		[UnionCase]
-		public static partial TestUnion Case3(string value);
+		public static partial TestUnion<T> Case3(string value);
+
+		[UnionCase]
+		public static partial TestUnion<T> Case4(T value);
 	}
 }
