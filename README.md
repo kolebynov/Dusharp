@@ -2,7 +2,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Dusharp)](https://www.nuget.org/packages/Dusharp/)
 
-**Dusharp** is a C# source generator for creating **discriminated unions**. This library allows you to define union types with ease, using attributes and partial methods. It is inspired by functional languages but built for C# developers.
+**Dusharp** is a C# source generator library for creating **discriminated unions**. This library allows you to define union types with ease, using attributes and partial methods. It is inspired by functional languages but built for C# developers.
 
 ## Features
 
