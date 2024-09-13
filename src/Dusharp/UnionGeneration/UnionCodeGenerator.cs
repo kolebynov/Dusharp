@@ -25,8 +25,6 @@ public static class UnionCodeGenerator
 			unionInfo.TypeSymbol, codeWriter,
 			innerBlock =>
 			{
-				innerBlock.WriteSuppressWarning("CS0660, CS0661", "Equals overriden in derived classes.", false);
-				innerBlock.WriteSuppressWarning("CA1067", "Equals overriden in derived classes.");
 				innerBlock.WriteSuppressWarning("CA1000", "For generic unions.");
 
 				innerBlock.AppendLine($"abstract partial class {unionInfo.ClassName} : System.IEquatable<{unionInfo.ClassName}>");
