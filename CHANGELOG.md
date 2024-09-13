@@ -2,6 +2,7 @@ v0.3.0
 ------
 
 - Add generic support for unions
+- Implement code generation using nullable reference types feature
 
 v0.2.0
 ------

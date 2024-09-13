@@ -5,13 +5,6 @@ namespace Dusharp;
 
 public static class CodeWritingUtils
 {
-	public static CodeWriter WriteOuterBlocks(INamedTypeSymbol typeSymbol, Action<CodeWriter> innerBlockWriter)
-	{
-		var codeWriter = new CodeWriter();
-		WriteOuterBlocks(typeSymbol, codeWriter, innerBlockWriter);
-		return codeWriter;
-	}
-
 	public static void WriteSuppressWarning(this CodeWriter codeWriter, string checkId,
 		string justification, bool useAttribute = true)
 	{
@@ -21,7 +14,7 @@ public static class CodeWritingUtils
 				: $"#pragma warning disable {checkId} // {justification}");
 	}
 
-	private static void WriteOuterBlocks(INamedTypeSymbol typeSymbol, CodeWriter codeWriter,
+	public static void WriteOuterBlocks(INamedTypeSymbol typeSymbol, CodeWriter codeWriter,
 		Action<CodeWriter> innerBlockWriter)
 	{
 		if (typeSymbol.ContainingType != null)

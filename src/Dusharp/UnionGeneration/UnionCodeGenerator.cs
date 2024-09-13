@@ -18,8 +18,11 @@ public static class UnionCodeGenerator
 
 	private static string GenerateClassUnionImpl(UnionGenerationInfo unionInfo)
 	{
-		using var codeWriter = CodeWritingUtils.WriteOuterBlocks(
-			unionInfo.TypeSymbol,
+		using var codeWriter = new CodeWriter();
+		codeWriter.AppendLine("#nullable enable");
+
+		CodeWritingUtils.WriteOuterBlocks(
+			unionInfo.TypeSymbol, codeWriter,
 			innerBlock =>
 			{
 				innerBlock.WriteSuppressWarning("CS0660, CS0661", "Equals overriden in derived classes.", false);
@@ -77,27 +80,27 @@ public static class UnionCodeGenerator
 		methodBlock.AppendLine($"{ThrowUnionInInvalidStateMethod}();");
 		if (methodBuilder.ReturnType != "void")
 		{
-			methodBlock.AppendLine("return default;");
+			methodBlock.AppendLine("return default!;");
 		}
 	}
 
 	private static void WriteDefaultEqualsMethods(UnionGenerationInfo union, CodeWriter unionBodyBlock)
 	{
-		unionBodyBlock.AppendLine($"public virtual bool Equals({union.ClassName} other) {{ return object.ReferenceEquals(this, other); }}");
-		unionBodyBlock.AppendLine("public override bool Equals(object other) { return object.ReferenceEquals(this, other); }");
+		unionBodyBlock.AppendLine($"public virtual bool Equals({union.ClassName}? other) {{ return object.ReferenceEquals(this, other); }}");
+		unionBodyBlock.AppendLine("public override bool Equals(object? other) { return object.ReferenceEquals(this, other); }");
 		unionBodyBlock.AppendLine("public override int GetHashCode() { return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this); }");
 	}
 
 	private static void WriteEqualityOperators(UnionGenerationInfo union, CodeWriter unionBodyBlock)
 	{
-		unionBodyBlock.AppendLine($"public static bool operator ==({union.ClassName} left, {union.ClassName} right)");
+		unionBodyBlock.AppendLine($"public static bool operator ==({union.ClassName}? left, {union.ClassName}? right)");
 		using (var operatorBodyBlock = unionBodyBlock.NewBlock())
 		{
 			operatorBodyBlock.AppendLine(
 				"return !object.ReferenceEquals(left, null) ? left.Equals(right) : object.ReferenceEquals(left, right);");
 		}
 
-		unionBodyBlock.AppendLine($"public static bool operator !=({union.ClassName} left, {union.ClassName} right)");
+		unionBodyBlock.AppendLine($"public static bool operator !=({union.ClassName}? left, {union.ClassName}? right)");
 		using (var operatorBodyBlock = unionBodyBlock.NewBlock())
 		{
 			operatorBodyBlock.AppendLine(
@@ -150,10 +153,10 @@ public static class UnionCodeGenerator
 
 		const string structuralEqualsMethod = "StructuralEquals";
 
-		caseClassBlock.AppendLine($"public override bool Equals({union.ClassName} other)");
+		caseClassBlock.AppendLine($"public override bool Equals({union.ClassName}? other)");
 		WriteEqualsMethodBody(unionCase, caseClassBlock);
 
-		caseClassBlock.AppendLine("public override bool Equals(object other)");
+		caseClassBlock.AppendLine("public override bool Equals(object? other)");
 		WriteEqualsMethodBody(unionCase, caseClassBlock);
 
 		caseClassBlock.AppendLine("public override int GetHashCode()");
@@ -162,7 +165,7 @@ public static class UnionCodeGenerator
 			var caseNameHashCode = $"\"{unionCase.Name}\".GetHashCode()";
 			var hashCodes = unionCase.Parameters
 				.Select(x =>
-					$"System.Collections.Generic.EqualityComparer<{x.TypeName}>.Default.GetHashCode({x.Name})")
+					$"System.Collections.Generic.EqualityComparer<{x.TypeName}>.Default.GetHashCode({x.Name}!)")
 				.Append(caseNameHashCode);
 			methodBodyBlock.AppendLine(
 				$"unchecked {{ return {string.Join(" * -1521134295 + ", hashCodes)}; }}");
@@ -171,17 +174,10 @@ public static class UnionCodeGenerator
 		caseClassBlock.AppendLine($"private bool {structuralEqualsMethod}({unionCase.ClassName} other)");
 		using (var methodBodyBlock = caseClassBlock.NewBlock())
 		{
-			if (!unionCase.HasParameters)
-			{
-				methodBodyBlock.AppendLine("return true;");
-			}
-			else
-			{
-				var conditions = unionCase.Parameters
-					.Select(x =>
-						$"System.Collections.Generic.EqualityComparer<{x.TypeName}>.Default.Equals({x.Name}, other.{x.Name})");
-				methodBodyBlock.AppendLine($"return {string.Join(" && ", conditions)};");
-			}
+			var conditions = unionCase.Parameters
+				.Select(x =>
+					$"System.Collections.Generic.EqualityComparer<{x.TypeName}>.Default.Equals({x.Name}, other.{x.Name})");
+			methodBodyBlock.AppendLine($"return {string.Join(" && ", conditions)};");
 		}
 
 		return;

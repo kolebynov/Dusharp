@@ -15,10 +15,10 @@ namespace Dusharp.Tests
 
 			// Act and Assert
 
-			union.Invoking(x => x.Match(null, (_, _) => { }, _ => { }, _ => { })).Should().Throw<ArgumentNullException>();
-			union.Invoking(x => x.Match(() => { }, null, _ => { }, _ => { })).Should().Throw<ArgumentNullException>();
-			union.Invoking(x => x.Match(() => { }, (_, _) => { }, null, _ => { })).Should().Throw<ArgumentNullException>();
-			union.Invoking(x => x.Match(() => { }, (_, _) => { }, _ => { }, null)).Should().Throw<ArgumentNullException>();
+			union.Invoking(x => x.Match(null!, (_, _) => { }, _ => { }, _ => { })).Should().Throw<ArgumentNullException>();
+			union.Invoking(x => x.Match(() => { }, null!, _ => { }, _ => { })).Should().Throw<ArgumentNullException>();
+			union.Invoking(x => x.Match(() => { }, (_, _) => { }, null!, _ => { })).Should().Throw<ArgumentNullException>();
+			union.Invoking(x => x.Match(() => { }, (_, _) => { }, _ => { }, null!)).Should().Throw<ArgumentNullException>();
 		}
 
 		[Fact]
