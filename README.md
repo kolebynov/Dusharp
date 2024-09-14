@@ -10,7 +10,7 @@
 - ✅ **Match method**: Pattern match on union cases in a type-safe way.
 - ✅ **Equality**: Automatic equality comparison for unions.
 - ✅ **Generics**: Generics support for union types.
-- ✅ **Pretty print**: Using overloaded `ToString()` (coming soon).
+- ✅ **Pretty print**: Using overloaded `ToString()`.
 - ❌ **JSON serialization/deserialization**: Support for unions with `System.Text.Json` (coming soon).
 - ❌ **Struct unions**: With efficient memory layout for unions as structs (coming soon).
 
