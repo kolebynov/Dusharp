@@ -131,6 +131,7 @@ public static class UnionCodeGenerator
 				}
 			}
 
+			WriteUnionCaseToStringMethod(unionCase, caseClassBlock);
 			WriteUnionCaseEqualsMethods(unionCase, union, caseClassBlock);
 		}
 
@@ -188,6 +189,18 @@ public static class UnionCodeGenerator
 			methodBodyBlock.AppendLine("if (object.ReferenceEquals(otherCasted, null)) return false;");
 			methodBodyBlock.AppendLine($"return {structuralEqualsMethod}(otherCasted);");
 		}
+	}
+
+	private static void WriteUnionCaseToStringMethod(UnionCaseGenerationInfo unionCase, CodeWriter caseClassBlock)
+	{
+		caseClassBlock.AppendLine("public override string ToString()");
+		using var toStringBodyBlock = caseClassBlock.NewBlock();
+
+		var parametersStr = string.Join(", ", unionCase.Parameters.Select(x => $"{x.Name} = {{{x.Name}}}"));
+		var resultStr = !string.IsNullOrEmpty(parametersStr)
+			? $"$\"{unionCase.Name} {{{{ {parametersStr} }}}}\""
+			: $"\"{unionCase.Name}\"";
+		toStringBodyBlock.AppendLine($"return {resultStr};");
 	}
 
 	private sealed class MatchMethodBuilder

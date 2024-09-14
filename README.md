@@ -10,7 +10,7 @@
 - ✅ **Match method**: Pattern match on union cases in a type-safe way.
 - ✅ **Equality**: Automatic equality comparison for unions.
 - ✅ **Generics**: Generics support for union types.
-- ❌ **Pretty print**: Using overloaded `ToString()` (coming soon).
+- ✅ **Pretty print**: Using overloaded `ToString()` (coming soon).
 - ❌ **JSON serialization/deserialization**: Support for unions with `System.Text.Json` (coming soon).
 - ❌ **Struct unions**: With efficient memory layout for unions as structs (coming soon).
 
@@ -82,7 +82,6 @@ Console.WriteLine(shape1 == shape2); // True
 ```
 
 ## Upcoming Features
-- **Pretty printing**: A default ToString() implementation for unions that provides a readable representation of union cases.
 - **JSON serialization/deserialization**: Support for JSON (de)serialization via System.Text.Json.
 - **Struct unions**: More efficient unions using structs with effective data layout.
 

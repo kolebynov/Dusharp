@@ -4,7 +4,7 @@
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-		<Version>0.3.0</Version>
+		<Version>0.4.0</Version>
 		<ImplicitUsings>false</ImplicitUsings>
 		<Authors>Vitali Kolebyanov</Authors>
 		<Description>Dusharp is a C# source generator for creating discriminated unions.</Description>
