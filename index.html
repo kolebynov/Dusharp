@@ -26,7 +26,7 @@
         <li>✅ <strong>Create unions</strong>: Define discriminated unions using attributes.</li>
         <li>✅ <strong>Match method</strong>: Pattern match on union cases in a type-safe way.</li>
         <li>✅ <strong>Equality</strong>: Automatic equality comparison for unions.</li>
-        <li>❌ <strong>Pretty print</strong>: Using overloaded <code>ToString()</code> (coming soon).</li>
+        <li>✅ <strong>Pretty print</strong>: Using overloaded <code>ToString()</code>.</li>
         <li>❌ <strong>JSON serialization/deserialization</strong>: Support for unions with <code>System.Text.Json</code>
             (coming soon).</li>
         <li>❌ <strong>Struct unions</strong>: With efficient memory layout for unions as structs (coming soon).</li>
@@ -84,8 +84,6 @@ bool areEqual = shape1.Equals(shape2); // true
 </code></pre>
     <h2 id="upcoming-features">Upcoming Features</h2>
     <ul>
-        <li><strong>Pretty printing</strong>: A default ToString() implementation for unions that provides a readable
-            representation of union cases.</li>
         <li><strong>JSON serialization/deserialization</strong>: Support for JSON (de)serialization via
             System.Text.Json.
         </li>
