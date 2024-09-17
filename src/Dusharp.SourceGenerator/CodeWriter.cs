@@ -71,7 +71,7 @@ public sealed class CodeWriter : IDisposable
 
 	private CodeWriter AppendLine(int depth, string line)
 	{
-		if (line != "}" && _lines.Count != 0 && _lines[_lines.Count - 1].Line == "}")
+		if (line != "}" && _lines.Count != 0 && _lines[^1].Line == "}")
 		{
 			_lines.Add((int.MinValue, string.Empty));
 		}

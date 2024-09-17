@@ -7,7 +7,7 @@ namespace Dusharp
 	public static class ExceptionUtils
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void ThrowIfNull<T>(this T value, string paramName)
+		public static void ThrowIfNull<T>(this T? value, string paramName)
 			where T : class
 		{
 			if (value == null)

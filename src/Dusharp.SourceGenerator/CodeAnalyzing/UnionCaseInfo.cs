@@ -8,8 +8,6 @@ public sealed class UnionCaseInfo
 
 	public IReadOnlyList<UnionCaseParameterInfo> Parameters { get; }
 
-	public bool HasParameters => Parameters.Count > 0;
-
 	public UnionCaseInfo(string name, IReadOnlyList<UnionCaseParameterInfo> parameters)
 	{
 		Name = name;

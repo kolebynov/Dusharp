@@ -8,6 +8,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Dusharp" Version="0.4.0" PrivateAssets="all"/>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0"/>
 		<PackageReference Include="PolySharp" Version="1.14.1">
 			<PrivateAssets>all</PrivateAssets>
@@ -19,6 +20,7 @@
 		<EmbeddedResource Include="EmbeddedCode\*.cs">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</EmbeddedResource>
+		<Compile Remove="EmbeddedCode\*.cs"/>
 	</ItemGroup>
 
 </Project>
