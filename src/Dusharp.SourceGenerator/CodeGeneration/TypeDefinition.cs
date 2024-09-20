@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Dusharp.CodeGeneration;
 
-public sealed class TypeDefinition
+public sealed record class TypeDefinition
 {
 	private string? _fullName;
 

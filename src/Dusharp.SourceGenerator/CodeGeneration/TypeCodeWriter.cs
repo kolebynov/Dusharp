@@ -26,12 +26,12 @@ public sealed class TypeCodeWriter
 
 		foreach (var methodDefinition in typeDefinition.Methods)
 		{
-			WriteMethod(methodDefinition, typeDefinition, typeBodyBlock);
+			WriteMethod(methodDefinition, typeBodyBlock);
 		}
 
 		foreach (var operatorDefinition in typeDefinition.Operators)
 		{
-			WriteOperator(operatorDefinition, typeDefinition, typeBodyBlock);
+			WriteOperator(operatorDefinition, typeBodyBlock);
 		}
 
 		foreach (var nestedTypeDefinition in typeDefinition.NestedTypes)
@@ -84,7 +84,7 @@ public sealed class TypeCodeWriter
 	{
 		WriteConstructorDeclaration(constructorDefinition, typeDefinition, typeBodyBlock);
 		using var constructorBodyBlock = typeBodyBlock.NewBlock();
-		constructorDefinition.BodyWriter(constructorDefinition, typeDefinition, constructorBodyBlock);
+		constructorDefinition.BodyWriter(constructorDefinition, constructorBodyBlock);
 	}
 
 	private static void WriteConstructorDeclaration(ConstructorDefinition constructorDefinition, TypeDefinition typeDefinition,
@@ -99,7 +99,7 @@ public sealed class TypeCodeWriter
 		typeBodyBlock.AppendLine($"{declarationStr}({ToParametersString(constructorDefinition.Parameters)})");
 	}
 
-	private static void WriteMethod(MethodDefinition methodDefinition, TypeDefinition typeDefinition, CodeWriter typeBodyBlock)
+	private static void WriteMethod(MethodDefinition methodDefinition, CodeWriter typeBodyBlock)
 	{
 		WriteMethodDeclaration(methodDefinition, typeBodyBlock);
 		if (methodDefinition.BodyWriter is not { } bodyWriter)
@@ -108,7 +108,7 @@ public sealed class TypeCodeWriter
 		}
 
 		using var methodBodyBlock = typeBodyBlock.NewBlock();
-		bodyWriter(methodDefinition, typeDefinition, methodBodyBlock);
+		bodyWriter(methodDefinition, methodBodyBlock);
 	}
 
 	private static void WriteMethodDeclaration(MethodDefinition methodDefinition, CodeWriter typeBodyBlock)
@@ -132,14 +132,13 @@ public sealed class TypeCodeWriter
 		typeBodyBlock.AppendLine($"{declarationStr}{genericParametersStr}({parametersStr}){endSemicolon}");
 	}
 
-	private static void WriteOperator(OperatorDefinition operatorDefinition, TypeDefinition typeDefinition,
-		CodeWriter typeBodyBlock)
+	private static void WriteOperator(OperatorDefinition operatorDefinition, CodeWriter typeBodyBlock)
 	{
 		typeBodyBlock.AppendLine(
 			$"public static {operatorDefinition.ReturnType} operator {operatorDefinition.Name}({ToParametersString(operatorDefinition.Parameters)})");
 
 		using var methodBodyBlock = typeBodyBlock.NewBlock();
-		operatorDefinition.BodyWriter(operatorDefinition, typeDefinition, methodBodyBlock);
+		operatorDefinition.BodyWriter(operatorDefinition, methodBodyBlock);
 	}
 
 	private static string ToParametersString(IReadOnlyList<MethodParameter> methodParameters) =>

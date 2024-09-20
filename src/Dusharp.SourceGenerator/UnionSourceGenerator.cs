@@ -15,7 +15,7 @@ public sealed class UnionSourceGenerator : IIncrementalGenerator
 {
 	private static readonly Type UnionAttributeType = typeof(UnionAttribute);
 	private static readonly Type UnionCaseAttributeType = typeof(UnionCaseAttribute);
-	private static readonly UnionCodeGenerator UnionCodeGenerator = new(new TypeCodeWriter());
+	private static readonly UnionCodeGenerator UnionCodeGenerator = new(new TypeCodeWriter(), new UnionDefinitionGeneratorFactory());
 
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{

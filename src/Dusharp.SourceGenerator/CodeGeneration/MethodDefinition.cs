@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Dusharp.CodeGeneration;
 
-public sealed class MethodDefinition
+public sealed record class MethodDefinition
 {
 	public Accessibility? Accessibility { get; init; }
 
@@ -20,7 +20,5 @@ public sealed class MethodDefinition
 
 	public IReadOnlyList<string> GenericParameters { get; init; } = [];
 
-	public Action<MethodDefinition, TypeDefinition, CodeWriter>? BodyWriter { get; init; }
-
-	public bool HasParameters => Parameters.Count > 0;
+	public Action<MethodDefinition, CodeWriter>? BodyWriter { get; init; }
 }

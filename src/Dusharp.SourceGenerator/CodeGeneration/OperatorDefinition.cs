@@ -11,5 +11,5 @@ public sealed class OperatorDefinition
 
 	public IReadOnlyList<MethodParameter> Parameters { get; init; } = [];
 
-	public required Action<OperatorDefinition, TypeDefinition, CodeWriter> BodyWriter { get; init; }
+	public required Action<OperatorDefinition, CodeWriter> BodyWriter { get; init; }
 }

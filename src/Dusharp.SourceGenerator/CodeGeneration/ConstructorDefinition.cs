@@ -13,5 +13,5 @@ public sealed class ConstructorDefinition
 
 	public IReadOnlyList<MethodParameter> Parameters { get; init; } = [];
 
-	public required Action<ConstructorDefinition, TypeDefinition, CodeWriter> BodyWriter { get; init; }
+	public required Action<ConstructorDefinition, CodeWriter> BodyWriter { get; init; }
 }
