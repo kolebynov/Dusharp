@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 
 namespace Dusharp.CodeGeneration;
@@ -15,4 +16,6 @@ public sealed class FieldDefinition
 	public required string Name { get; init; }
 
 	public string? Initializer { get; init; }
+
+	public IReadOnlyList<string> Attributes { get; init; } = [];
 }

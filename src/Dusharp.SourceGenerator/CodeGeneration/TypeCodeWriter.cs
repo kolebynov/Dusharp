@@ -10,6 +10,11 @@ public sealed class TypeCodeWriter
 	public void WriteType(TypeDefinition typeDefinition, CodeWriter codeWriter)
 #pragma warning restore CA1822
 	{
+		foreach (var attribute in typeDefinition.Attributes)
+		{
+			WriteAttribute(attribute, codeWriter);
+		}
+
 		WriteTypeDeclaration(typeDefinition, codeWriter);
 
 		using var typeBodyBlock = codeWriter.NewBlock();
@@ -69,6 +74,11 @@ public sealed class TypeCodeWriter
 
 	private static void WriteField(FieldDefinition fieldDefinition, CodeWriter typeBodyBlock)
 	{
+		foreach (var attribute in fieldDefinition.Attributes)
+		{
+			WriteAttribute(attribute, typeBodyBlock);
+		}
+
 		var declarationBuilder = new DeclarationBuilder()
 			.AddIf(fieldDefinition.Accessibility != null, () => fieldDefinition.Accessibility!.Value.ToCodeString())
 			.AddIf(fieldDefinition.IsStatic, () => "static")
@@ -139,6 +149,11 @@ public sealed class TypeCodeWriter
 
 		using var methodBodyBlock = typeBodyBlock.NewBlock();
 		operatorDefinition.BodyWriter(operatorDefinition, methodBodyBlock);
+	}
+
+	private static void WriteAttribute(string attribute, CodeWriter codeWriter)
+	{
+		codeWriter.Append("[").Append(attribute).AppendLine("]");
 	}
 
 	private static string ToParametersString(IReadOnlyList<MethodParameter> methodParameters) =>

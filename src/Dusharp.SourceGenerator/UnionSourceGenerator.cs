@@ -34,7 +34,7 @@ public sealed class UnionSourceGenerator : IIncrementalGenerator
 
 		var unionsProvider = context.SyntaxProvider.ForAttributeWithMetadataName(
 			UnionAttributeType.FullName!,
-			(node, _) => node is ClassDeclarationSyntax,
+			(node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax,
 			(ctx, _) => (INamedTypeSymbol)ctx.TargetSymbol);
 		var caseAttributeProvider = context.CompilationProvider
 			.Select((x, _) => x.GetTypeByMetadataName(UnionCaseAttributeType.FullName!));

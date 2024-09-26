@@ -8,7 +8,7 @@ public interface IUnionDefinitionGenerator
 {
 	TypeKind TypeKind { get; }
 
-	Action<MethodDefinition, CodeWriter> GetUnionCaseMethodBodyWriter(UnionCaseInfo unionCase, string unionTypeName);
+	Action<MethodDefinition, CodeWriter> GetUnionCaseMethodBodyWriter(UnionCaseInfo unionCase);
 
 	MethodDefinition AdjustDefaultEqualsMethod(MethodDefinition equalsMethod);
 
@@ -19,7 +19,7 @@ public interface IUnionDefinitionGenerator
 	Action<OperatorDefinition, CodeWriter> GetEqualityOperatorBodyWriter();
 
 	void WriteMatchBlock(UnionCaseInfo unionCase, Func<string, string> matchedCaseDelegateCallProvider,
-		CodeWriter matchBlock, string unionTypeName);
+		CodeWriter matchBlock);
 
 	TypeDefinition AddAdditionalInfo(TypeDefinition typeDefinition);
 }

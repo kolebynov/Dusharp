@@ -3,7 +3,7 @@ using System;
 
 namespace Dusharp
 {
-	[AttributeUsage(AttributeTargets.Class)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 	public sealed class UnionAttribute : Attribute
 	{
 	}

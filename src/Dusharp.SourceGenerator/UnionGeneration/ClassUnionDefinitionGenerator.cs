@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
+using Dusharp.Extensions;
 using Microsoft.CodeAnalysis;
 using TypeKind = Dusharp.CodeGeneration.TypeKind;
 
@@ -10,22 +11,20 @@ namespace Dusharp.UnionGeneration;
 
 public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 {
-	private readonly UnionInfo _union;
-	private Dictionary<string, TypeDefinition>? _nestedUnionCaseTypes;
+	private readonly Dictionary<UnionCaseInfo, TypeDefinition> _nestedUnionCaseTypes;
 
 	public ClassUnionDefinitionGenerator(UnionInfo union)
 	{
-		_union = union;
+		_nestedUnionCaseTypes = GetUnionCaseNestedTypes(union, union.GetTypeName().FullName);
 	}
 
 	public TypeKind TypeKind => TypeKind.Class(true, false);
 
-	public Action<MethodDefinition, CodeWriter> GetUnionCaseMethodBodyWriter(
-		UnionCaseInfo unionCase, string unionTypeName)
+	public Action<MethodDefinition, CodeWriter> GetUnionCaseMethodBodyWriter(UnionCaseInfo unionCase)
 	{
-		var nestedUnionCaseType = GetUnionCaseNestedTypes(unionTypeName)[unionCase.Name];
-		return (_, methodBlock) => methodBlock.AppendLine(unionCase.HasParameters
-			? $"return new {nestedUnionCaseType.FullName}({string.Join(", ", unionCase.Parameters.Select(x => x.Name))});"
+		var nestedUnionCaseType = _nestedUnionCaseTypes[unionCase];
+		return (def, methodBlock) => methodBlock.AppendLine(unionCase.HasParameters
+			? $"return new {nestedUnionCaseType.FullName}({string.Join(", ", def.Parameters.Select(x => x.Name))});"
 			: $"return {nestedUnionCaseType.FullName}.Instance;");
 	}
 
@@ -58,9 +57,9 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		};
 
 	public void WriteMatchBlock(UnionCaseInfo unionCase, Func<string, string> matchedCaseDelegateCallProvider,
-		CodeWriter matchBlock, string unionTypeName)
+		CodeWriter matchBlock)
 	{
-		var caseNestedType = GetUnionCaseNestedTypes(unionTypeName)[unionCase.Name];
+		var caseNestedType = _nestedUnionCaseTypes[unionCase];
 		matchBlock.AppendLine($"var unionCase = this as {caseNestedType.FullName};");
 		var argumentsStr = string.Join(", ", unionCase.Parameters.Select(x => $"unionCase.{x.Name}"));
 		matchBlock.AppendLine(
@@ -78,11 +77,11 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 					BodyWriter = (_, _) => { },
 				},
 			],
-			NestedTypes = GetUnionCaseNestedTypes(typeDefinition.FullName).Select(x => x.Value).ToArray(),
+			NestedTypes = _nestedUnionCaseTypes.Select(x => x.Value).ToArray(),
 		};
 
-	private Dictionary<string, TypeDefinition> GetUnionCaseNestedTypes(string unionTypeName) =>
-		_nestedUnionCaseTypes ??= _union.Cases.ToDictionary(x => x.Name, x => GetUnionCaseNestedType(x, unionTypeName));
+	private static Dictionary<UnionCaseInfo, TypeDefinition> GetUnionCaseNestedTypes(UnionInfo union, string unionTypeName) =>
+		union.Cases.ToDictionary(x => x, x => GetUnionCaseNestedType(x, unionTypeName));
 
 	private static TypeDefinition GetUnionCaseNestedType(UnionCaseInfo unionCase, string unionTypeName)
 	{

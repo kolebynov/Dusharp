@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
+using Dusharp.Extensions;
 using Microsoft.CodeAnalysis;
 
 namespace Dusharp.UnionGeneration;
@@ -11,6 +12,7 @@ public sealed class UnionCodeGenerator
 {
 	private static readonly string ThrowIfNullMethod =
 		$"{typeof(ExceptionUtils).FullName}.{nameof(ExceptionUtils.ThrowIfNull)}";
+
 	private static readonly string ThrowUnionInInvalidStateMethod =
 		$"{typeof(ExceptionUtils).FullName}.{nameof(ExceptionUtils.ThrowUnionInInvalidState)}";
 
@@ -40,150 +42,165 @@ public sealed class UnionCodeGenerator
 			{
 				innerBlock.WriteSuppressWarning("CA1000", "For generic unions.");
 				var unionDefinitionGenerator = _unionDefinitionGeneratorFactory.Create(unionInfo);
-				var unionTypeDefinition = new TypeDefinition
-				{
-					Name = unionInfo.Name,
-					Kind = unionDefinitionGenerator.TypeKind,
-					IsPartial = true,
-					GenericParameters = unionInfo.TypeSymbol.TypeParameters
-						.Select(x => x.Name)
-						.ToArray(),
-				};
-
-				var nullableUnionTypeName = unionInfo.TypeSymbol.IsValueType
-					? unionTypeDefinition.FullName
-					: $"{unionTypeDefinition.FullName}?";
-				unionTypeDefinition = unionTypeDefinition with
-				{
-					InheritedTypes = [$"System.IEquatable<{unionTypeDefinition.FullName}>"],
-					Methods =
-					[
-						.. unionInfo.Cases.Select(x => GetUnionCaseMethod(x, unionTypeDefinition.FullName, unionDefinitionGenerator)),
-						GetMatchMethod(unionInfo, MatchMethodConfiguration.WithoutStateWithoutReturn, unionTypeDefinition.FullName, unionDefinitionGenerator),
-						GetMatchMethod(unionInfo, MatchMethodConfiguration.WithoutStateWithReturn, unionTypeDefinition.FullName, unionDefinitionGenerator),
-						GetMatchMethod(unionInfo, MatchMethodConfiguration.WithStateWithoutReturn, unionTypeDefinition.FullName, unionDefinitionGenerator),
-						GetMatchMethod(unionInfo, MatchMethodConfiguration.WithStateWithReturn, unionTypeDefinition.FullName, unionDefinitionGenerator),
-						.. GetDefaultEqualsMethods(nullableUnionTypeName, unionDefinitionGenerator),
-					],
-					Operators = GetEqualityOperators(nullableUnionTypeName, unionDefinitionGenerator),
-				};
-
-				unionTypeDefinition = unionDefinitionGenerator.AddAdditionalInfo(unionTypeDefinition);
-
+				var unionTypeDefinition =
+					new UnionTypeDefinitionGenerator(unionDefinitionGenerator, unionInfo).Generate();
 				_typeCodeWriter.WriteType(unionTypeDefinition, innerBlock);
 			});
 
 		return codeWriter.ToString();
 	}
 
-	private static MethodDefinition GetUnionCaseMethod(UnionCaseInfo unionCase, string unionTypeName,
-		IUnionDefinitionGenerator unionDefinitionGenerator) =>
-		new MethodDefinition
-		{
-			Name = unionCase.Name,
-			ReturnType = unionTypeName,
-			Accessibility = Accessibility.Public,
-			MethodModifier = MethodModifier.Static(),
-			IsPartial = true,
-			Parameters = unionCase.Parameters.Select(x => new MethodParameter(x.TypeName, x.Name)).ToArray(),
-			BodyWriter = unionDefinitionGenerator.GetUnionCaseMethodBodyWriter(unionCase, unionTypeName),
-		};
-
-	private static MethodDefinition GetMatchMethod(
-		UnionInfo union, MatchMethodConfiguration methodConfiguration, string unionTypeName,
-		IUnionDefinitionGenerator unionDefinitionGenerator)
+	private sealed class UnionTypeDefinitionGenerator
 	{
-		var matchDelegateParameters = union.Cases
-			.Select(x => new MethodParameter(
-				methodConfiguration.MatchCaseDelegateTypeProvider(string.Join(", ", x.Parameters.Select(y => y.TypeName))),
-				$"{char.ToLowerInvariant(x.Name[0])}{x.Name.AsSpan(1).ToString()}Case"))
-			.ToArray();
+		private readonly IUnionDefinitionGenerator _unionDefinitionGenerator;
+		private readonly UnionInfo _union;
+		private readonly TypeName _unionTypeName;
+		private readonly string _nullableUnionTypeName;
 
-		return new MethodDefinition
+		public UnionTypeDefinitionGenerator(IUnionDefinitionGenerator unionDefinitionGenerator, UnionInfo union)
 		{
-			Name = "Match",
-			ReturnType = methodConfiguration.ReturnType,
-			Accessibility = Accessibility.Public,
-			Parameters = methodConfiguration.MethodParametersExtender(matchDelegateParameters).ToArray(),
-			GenericParameters = methodConfiguration.GenericParameters,
-			BodyWriter = (_, methodBlock) =>
+			_unionDefinitionGenerator = unionDefinitionGenerator;
+			_union = union;
+			_unionTypeName = union.GetTypeName();
+			_nullableUnionTypeName = _union.TypeSymbol.IsValueType
+				? _unionTypeName.FullName
+				: $"{_unionTypeName.FullName}?";
+		}
+
+		public TypeDefinition Generate()
+		{
+			var unionTypeDefinition = new TypeDefinition
 			{
-				foreach (var matchDelegateParameter in matchDelegateParameters)
-				{
-					methodBlock.AppendLine($"{ThrowIfNullMethod}({matchDelegateParameter.Name}, \"{matchDelegateParameter.Name}\");");
-				}
+				Name = _union.Name,
+				Kind = _unionDefinitionGenerator.TypeKind,
+				IsPartial = true,
+				GenericParameters = _union.TypeSymbol.TypeParameters.Select(x => x.Name).ToArray(),
+				InheritedTypes = [$"System.IEquatable<{_unionTypeName.FullName}>"],
+				Methods = _union.Cases
+					.Select(GetUnionCaseMethod)
+					.Concat(
+					[
+						GetMatchMethod(MatchMethodConfiguration.WithoutStateWithoutReturn),
+						GetMatchMethod(MatchMethodConfiguration.WithoutStateWithReturn),
+						GetMatchMethod(MatchMethodConfiguration.WithStateWithoutReturn),
+						GetMatchMethod(MatchMethodConfiguration.WithStateWithReturn),
+					])
+					.Concat(GetDefaultEqualsMethods())
+					.ToArray(),
+				Operators = GetEqualityOperators(_nullableUnionTypeName, _unionDefinitionGenerator),
+			};
 
-				methodBlock.AppendLine();
-				foreach (var (unionCase, parameterName) in union.Cases.Zip(matchDelegateParameters, (x, y) => (x, y.Name)))
-				{
-					using var matchBlock = methodBlock.NewBlock();
-					unionDefinitionGenerator.WriteMatchBlock(
-						unionCase, argumentsStr => methodConfiguration.MatchBodyProvider(parameterName, argumentsStr),
-						matchBlock, unionTypeName);
-				}
+			return _unionDefinitionGenerator.AddAdditionalInfo(unionTypeDefinition);
+		}
 
-				methodBlock.AppendLine($"{ThrowUnionInInvalidStateMethod}();");
-				if (methodConfiguration.ReturnType != "void")
+		private MethodDefinition GetUnionCaseMethod(UnionCaseInfo unionCase) =>
+			new MethodDefinition
+			{
+				Name = unionCase.Name,
+				ReturnType = _unionTypeName.FullName,
+				Accessibility = Accessibility.Public,
+				MethodModifier = MethodModifier.Static(),
+				IsPartial = true,
+				Parameters = unionCase.Parameters.Select(x => new MethodParameter(x.TypeName, x.Name)).ToArray(),
+				BodyWriter = _unionDefinitionGenerator.GetUnionCaseMethodBodyWriter(unionCase),
+			};
+
+		private MethodDefinition GetMatchMethod(MatchMethodConfiguration methodConfiguration)
+		{
+			var matchDelegateParameters = _union.Cases
+				.Select(x => new MethodParameter(
+					methodConfiguration.MatchCaseDelegateTypeProvider(string.Join(", ", x.Parameters.Select(y => y.TypeName))),
+					$"{char.ToLowerInvariant(x.Name[0])}{x.Name.AsSpan(1).ToString()}Case"))
+				.ToArray();
+
+			return new MethodDefinition
+			{
+				Name = "Match",
+				ReturnType = methodConfiguration.ReturnType,
+				Accessibility = Accessibility.Public,
+				Parameters = methodConfiguration.MethodParametersExtender(matchDelegateParameters).ToArray(),
+				GenericParameters = methodConfiguration.GenericParameters,
+				BodyWriter = (_, methodBlock) =>
 				{
-					methodBlock.AppendLine("return default!;");
-				}
+					foreach (var matchDelegateParameter in matchDelegateParameters)
+					{
+						methodBlock.AppendLine(
+							$"{ThrowIfNullMethod}({matchDelegateParameter.Name}, \"{matchDelegateParameter.Name}\");");
+					}
+
+					methodBlock.AppendLine();
+					foreach (var (unionCase, parameterName) in _union.Cases.Zip(matchDelegateParameters, (x, y) => (x, y.Name)))
+					{
+						using var matchBlock = methodBlock.NewBlock();
+						_unionDefinitionGenerator.WriteMatchBlock(
+							unionCase,
+							argumentsStr => methodConfiguration.MatchBodyProvider(parameterName, argumentsStr),
+							matchBlock);
+					}
+
+					methodBlock.AppendLine($"{ThrowUnionInInvalidStateMethod}();");
+					if (methodConfiguration.ReturnType != "void")
+					{
+						methodBlock.AppendLine("return default!;");
+					}
+				},
+			};
+		}
+
+		private MethodDefinition[] GetDefaultEqualsMethods() =>
+		[
+			_unionDefinitionGenerator.AdjustSpecificEqualsMethod(new MethodDefinition
+			{
+				Name = "Equals",
+				Accessibility = Accessibility.Public,
+				ReturnType = "bool",
+				Parameters = [new MethodParameter(_nullableUnionTypeName, "other")],
+			}),
+			_unionDefinitionGenerator.AdjustDefaultEqualsMethod(new MethodDefinition
+			{
+				Name = "Equals",
+				Accessibility = Accessibility.Public,
+				ReturnType = "bool",
+				Parameters = [new MethodParameter("object?", "other")],
+				MethodModifier = MethodModifier.Override(),
+			}),
+			new MethodDefinition
+			{
+				Name = "GetHashCode",
+				Accessibility = Accessibility.Public,
+				ReturnType = "int",
+				MethodModifier = MethodModifier.Override(),
+				BodyWriter = _unionDefinitionGenerator.GetGetHashCodeMethodBodyWriter(),
 			},
-		};
+		];
+
+		private static OperatorDefinition[] GetEqualityOperators(
+			string nullableUnionTypeName, IUnionDefinitionGenerator unionDefinitionGenerator) =>
+		[
+			new OperatorDefinition
+			{
+				Name = "==",
+				ReturnType = "bool",
+				Parameters =
+				[
+					new MethodParameter(nullableUnionTypeName, "left"),
+					new MethodParameter(nullableUnionTypeName, "right"),
+				],
+				BodyWriter = unionDefinitionGenerator.GetEqualityOperatorBodyWriter(),
+			},
+			new OperatorDefinition
+			{
+				Name = "!=",
+				ReturnType = "bool",
+				Parameters =
+				[
+					new MethodParameter(nullableUnionTypeName, "left"),
+					new MethodParameter(nullableUnionTypeName, "right"),
+				],
+				BodyWriter = static (_, operatorBodyBlock) => operatorBodyBlock.AppendLine("return !(left == right);"),
+			},
+		];
 	}
-
-	private static MethodDefinition[] GetDefaultEqualsMethods(string nullableUnionTypeName, IUnionDefinitionGenerator unionDefinitionGenerator) =>
-	[
-		unionDefinitionGenerator.AdjustSpecificEqualsMethod(new MethodDefinition
-		{
-			Name = "Equals",
-			Accessibility = Accessibility.Public,
-			ReturnType = "bool",
-			Parameters = [new MethodParameter(nullableUnionTypeName, "other")],
-		}),
-		unionDefinitionGenerator.AdjustDefaultEqualsMethod(new MethodDefinition
-		{
-			Name = "Equals",
-			Accessibility = Accessibility.Public,
-			ReturnType = "bool",
-			Parameters = [new MethodParameter("object?", "other")],
-			MethodModifier = MethodModifier.Override(),
-		}),
-		new MethodDefinition
-		{
-			Name = "GetHashCode",
-			Accessibility = Accessibility.Public,
-			ReturnType = "int",
-			MethodModifier = MethodModifier.Override(),
-			BodyWriter = unionDefinitionGenerator.GetGetHashCodeMethodBodyWriter(),
-		},
-	];
-
-	private static OperatorDefinition[] GetEqualityOperators(
-		string nullableUnionTypeName, IUnionDefinitionGenerator unionDefinitionGenerator) =>
-	[
-		new OperatorDefinition
-		{
-			Name = "==",
-			ReturnType = "bool",
-			Parameters =
-			[
-				new MethodParameter(nullableUnionTypeName, "left"),
-				new MethodParameter(nullableUnionTypeName, "right"),
-			],
-			BodyWriter = unionDefinitionGenerator.GetEqualityOperatorBodyWriter(),
-		},
-		new OperatorDefinition
-		{
-			Name = "!=",
-			ReturnType = "bool",
-			Parameters =
-			[
-				new MethodParameter(nullableUnionTypeName, "left"),
-				new MethodParameter(nullableUnionTypeName, "right"),
-			],
-			BodyWriter = static (_, operatorBodyBlock) => operatorBodyBlock.AppendLine("return !(left == right);"),
-		},
-	];
 
 	private sealed class MatchMethodConfiguration
 	{
@@ -216,7 +233,8 @@ public sealed class UnionCodeGenerator
 			})
 		{
 			GenericParameters = ["TState"],
-			MethodParametersExtender = methodParameters => methodParameters.Prepend(new MethodParameter("TState", "state")),
+			MethodParametersExtender =
+				methodParameters => methodParameters.Prepend(new MethodParameter("TState", "state")),
 		};
 
 		public static readonly MatchMethodConfiguration WithStateWithReturn = new(
@@ -231,7 +249,8 @@ public sealed class UnionCodeGenerator
 			})
 		{
 			GenericParameters = ["TState", "TRet"],
-			MethodParametersExtender = methodParameters => methodParameters.Prepend(new MethodParameter("TState", "state")),
+			MethodParametersExtender =
+				methodParameters => methodParameters.Prepend(new MethodParameter("TState", "state")),
 		};
 
 		public string ReturnType { get; }
@@ -242,7 +261,8 @@ public sealed class UnionCodeGenerator
 
 		public Func<string, string, string> MatchBodyProvider { get; }
 
-		public Func<IEnumerable<MethodParameter>, IEnumerable<MethodParameter>> MethodParametersExtender { get; private init; } = x => x;
+		public Func<IEnumerable<MethodParameter>, IEnumerable<MethodParameter>> MethodParametersExtender { get; private init; } =
+			x => x;
 
 		public MatchMethodConfiguration(string returnType, Func<string, string> matchCaseDelegateTypeProvider,
 			Func<string, string, string> matchBodyProvider)

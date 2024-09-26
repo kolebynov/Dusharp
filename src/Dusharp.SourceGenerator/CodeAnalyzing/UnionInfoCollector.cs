@@ -15,7 +15,7 @@ public static class UnionInfoCollector
 					false))
 			.Select(x => new UnionCaseInfo(
 				x.Name,
-				x.Parameters.Select(y => new UnionCaseParameterInfo(y.Name, y.Type.ToString())).ToArray()))
+				x.Parameters.Select(y => new UnionCaseParameterInfo(y.Name, y.Type)).ToArray()))
 			.ToArray();
 
 		return new UnionInfo(unionClassSymbol.Name, unionCases, unionClassSymbol);
