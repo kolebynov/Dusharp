@@ -11,7 +11,7 @@
 - ✅ **Equality**: Automatic equality comparison for unions.
 - ✅ **Generics**: Generics support for union types.
 - ✅ **Pretty print**: Using overloaded `ToString()`.
-- ✅ **Struct unions**: With efficient memory layout for unions as structs (coming soon).
+- ✅ **Struct unions**: With efficient memory layout for unions as structs.
 - ❌ **JSON serialization/deserialization**: Support for unions with `System.Text.Json` (coming soon).
 
 ## Installation
