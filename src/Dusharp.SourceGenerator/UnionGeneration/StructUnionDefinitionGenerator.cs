@@ -79,13 +79,39 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 	public MethodDefinition AdjustSpecificEqualsMethod(MethodDefinition equalsMethod) =>
 		equalsMethod with
 		{
-			BodyWriter = (def, methodBlock) => methodBlock.AppendLine("return false;"),
+			BodyWriter = (def, methodBlock) =>
+			{
+				var otherName = def.Parameters[0].Name;
+
+				methodBlock
+					.Append("if (this.Index != ")
+					.Append(otherName)
+					.AppendLine(".Index) return false;");
+
+				WriteCasesSwitchBody(
+					methodBlock,
+					(unionCase, caseParameters) =>
+					{
+						var equalityCode = unionCase.HasParameters
+							? UnionGenerationUtils.GetUnionCaseEqualityCode(
+								caseParameters.Select(x => (x.Type, x.ValueAccessor("this"), x.ValueAccessor(otherName))))
+							: "true";
+						return $"return {equalityCode};";
+					});
+
+				methodBlock.AppendLine("return true;");
+			},
 		};
 
-	public Action<MethodDefinition, CodeWriter> GetGetHashCodeMethodBodyWriter()
-	{
-		return (def, methodBlock) => methodBlock.AppendLine("return 0;");
-	}
+	public Action<MethodDefinition, CodeWriter> GetGetHashCodeMethodBodyWriter() =>
+		(_, methodBlock) =>
+		{
+			WriteCasesSwitchBody(
+				methodBlock,
+				(unionCase, caseParameters) => UnionGenerationUtils.GetUnionCaseHashCodeCode(
+					GetUnionCaseIndex(unionCase), caseParameters.Select(x => (x.Type, x.ValueAccessor("this")))));
+			methodBlock.AppendLine("return 0;");
+		};
 
 	public Action<OperatorDefinition, CodeWriter> GetEqualityOperatorBodyWriter() =>
 		(def, operatorBlock) => operatorBlock
@@ -100,7 +126,7 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 	{
 		var unionCaseIndex = GetUnionCaseIndex(unionCase);
 		var caseParameters = _casesParameters[unionCase];
-		var argumentsStr = string.Join(", ", caseParameters.Select(x => x.ValueAccessor));
+		var argumentsStr = string.Join(", ", caseParameters.Select(x => x.ValueAccessor("this")));
 		matchBlock
 			.Append("if (Index == ")
 			.Append(unionCaseIndex.ToString(CultureInfo.InvariantCulture))
@@ -140,24 +166,17 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 					Name = "ToString",
 					BodyWriter = (_, methodBlock) =>
 					{
-						methodBlock.AppendLine("switch (Index)");
-						using (var switchBlock = methodBlock.NewBlock())
-						{
-							foreach (var unionCase in _union.Cases)
+						WriteCasesSwitchBody(
+							methodBlock,
+							(unionCase, caseParameters) =>
 							{
-								var caseParameters = _casesParameters[unionCase];
-								var caseIndex = GetUnionCaseIndex(unionCase);
-								switchBlock
-									.AppendLine($"case {caseIndex}:")
-									.Append("\treturn ")
-									.Append(UnionGenerationUtils.GetCaseStringRepresentation(
-										unionCase.Name,
-										unionCase.Parameters
-											.Zip(caseParameters, (x, y) => (x.Name, y.ValueAccessor))
-											.ToArray()))
-									.AppendLine(";");
-							}
-						}
+								var caseStringRepresentation = UnionGenerationUtils.GetCaseStringRepresentation(
+									unionCase.Name,
+									unionCase.Parameters
+										.Zip(caseParameters, (x, y) => (x.Name, y.ValueAccessor("this")))
+										.ToArray());
+								return $"return {caseStringRepresentation};";
+							});
 
 						methodBlock
 							.AppendLine(UnionGenerationUtils.ThrowUnionInInvalidStateCode)
@@ -171,12 +190,28 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 	public IReadOnlyList<TypeDefinition> GetAdditionalTypes() =>
 		_unionImplementationGenerator.GetAdditionalTypes(_unionTypeName.Name);
 
+	private void WriteCasesSwitchBody(
+		CodeWriter codeWriter, Func<UnionCaseInfo, IReadOnlyList<CaseParameter>, string> caseStatementProvider)
+	{
+		codeWriter.AppendLine("switch (Index)");
+		using var switchBlock = codeWriter.NewBlock();
+		foreach (var unionCase in _union.Cases)
+		{
+			var caseParameters = _casesParameters[unionCase];
+			var caseIndex = GetUnionCaseIndex(unionCase);
+			switchBlock
+				.AppendLine($"case {caseIndex}:")
+				.Append("\t")
+				.AppendLine(caseStatementProvider(unionCase, caseParameters));
+		}
+	}
+
 	private int GetUnionCaseIndex(UnionCaseInfo unionCase) => _union.Cases.IndexOf(unionCase) + 1;
 
 	private static string GetLayoutAttribute(LayoutKind layoutKind) =>
 		$"System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.{layoutKind})";
 
-	private readonly record struct CaseParameter(string FieldPath, string ValueAccessor);
+	private readonly record struct CaseParameter(string FieldPath, string Type, Func<string, string> ValueAccessor);
 
 	private sealed class UnionImplementationGenerator
 	{
@@ -199,17 +234,18 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 
 					blittableStructInfo.Fields.Add(new TypeNamePair(caseParameter.TypeName, caseParameter.Name));
 					var fieldPath = $"{BlittableStructFieldName}.{blittableStructInfo.FieldName}.{caseParameter.Name}";
-					return new CaseParameter(fieldPath, $"this.{fieldPath}");
+					return new CaseParameter(fieldPath, caseParameter.TypeName, v => $"{v}.{fieldPath}");
 
 				case { IsReferenceType: true }:
 					var referenceTypeParameter = GetOrAddDefaultParameter("object", unionCase);
 					return new CaseParameter(
 						referenceTypeParameter.Name,
-						$"System.Runtime.CompilerServices.Unsafe.As<{caseParameter.TypeName}>(this.{referenceTypeParameter.Name})");
+						caseParameter.TypeName,
+						v => $"System.Runtime.CompilerServices.Unsafe.As<{caseParameter.TypeName}>({v}.{referenceTypeParameter.Name})");
 
 				default:
 					var defaultParameter = GetOrAddDefaultParameter(caseParameter.TypeName, unionCase);
-					return new CaseParameter(defaultParameter.Name, $"this.{defaultParameter.Name}");
+					return new CaseParameter(defaultParameter.Name, caseParameter.TypeName, v => $"{v}.{defaultParameter.Name}");
 			}
 		}
 

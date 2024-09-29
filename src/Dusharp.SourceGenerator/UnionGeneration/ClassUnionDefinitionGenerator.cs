@@ -83,9 +83,9 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 	public IReadOnlyList<TypeDefinition> GetAdditionalTypes() => [];
 
 	private static Dictionary<UnionCaseInfo, TypeDefinition> GetUnionCaseNestedTypes(UnionInfo union, string unionTypeName) =>
-		union.Cases.ToDictionary(x => x, x => GetUnionCaseNestedType(x, unionTypeName));
+		union.Cases.ToDictionary(x => x, x => GetUnionCaseNestedType(x, union, unionTypeName));
 
-	private static TypeDefinition GetUnionCaseNestedType(UnionCaseInfo unionCase, string unionTypeName)
+	private static TypeDefinition GetUnionCaseNestedType(UnionCaseInfo unionCase, UnionInfo union, string unionTypeName)
 	{
 		var unionCaseClassName = $"{unionCase.Name}Case";
 		var fields = unionCase.Parameters.Select(caseParameter => new FieldDefinition
@@ -132,13 +132,13 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			Methods =
 			[
 				GetUnionCaseToStringMethod(unionCase),
-				.. GetUnionCaseEqualsMethods(unionCase, unionCaseClassName, unionTypeName),
+				.. GetUnionCaseEqualsMethods(unionCase, union, unionCaseClassName, unionTypeName),
 			],
 		};
 	}
 
 	private static MethodDefinition[] GetUnionCaseEqualsMethods(
-		UnionCaseInfo unionCase, string caseClassName, string unionTypeName)
+		UnionCaseInfo unionCase, UnionInfo union, string caseClassName, string unionTypeName)
 	{
 		if (!unionCase.HasParameters)
 		{
@@ -174,13 +174,10 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 				Name = "GetHashCode",
 				BodyWriter = (_, methodBlock) =>
 				{
-					var caseNameHashCode = $"\"{unionCase.Name}\".GetHashCode()";
-					var hashCodes = unionCase.Parameters
-						.Select(x =>
-							$"System.Collections.Generic.EqualityComparer<{x.TypeName}>.Default.GetHashCode({x.Name}!)")
-						.Append(caseNameHashCode);
+					var caseIndex = union.Cases.IndexOf(unionCase) + 1;
 					methodBlock.AppendLine(
-						$"unchecked {{ return {string.Join(" * -1521134295 + ", hashCodes)}; }}");
+						UnionGenerationUtils.GetUnionCaseHashCodeCode(
+							caseIndex, unionCase.Parameters.Select(x => (x.TypeName, x.Name))));
 				},
 			},
 			new MethodDefinition
@@ -189,12 +186,13 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 				ReturnType = "bool",
 				Name = structuralEqualsMethod,
 				Parameters = [new MethodParameter(caseClassName, "other")],
-				BodyWriter = (_, methodBlock) =>
+				BodyWriter = (def, methodBlock) =>
 				{
-					var conditions = unionCase.Parameters
-						.Select(x =>
-							$"System.Collections.Generic.EqualityComparer<{x.TypeName}>.Default.Equals({x.Name}, other.{x.Name})");
-					methodBlock.AppendLine($"return {string.Join(" && ", conditions)};");
+					methodBlock
+						.Append("return ")
+						.Append(UnionGenerationUtils.GetUnionCaseEqualityCode(
+							unionCase.Parameters.Select(x => (x.TypeName, x.Name, $"{def.Parameters[0].Name}.{x.Name}"))))
+						.AppendLine(";");
 				},
 			},
 		];

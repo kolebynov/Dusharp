@@ -30,6 +30,7 @@ namespace Dusharp.Tests
 			// Act and Assert
 
 			union1.Equals(union1).Should().BeTrue();
+
 			structUnion1.Equals(structUnion1).Should().BeTrue();
 		}
 
@@ -110,7 +111,34 @@ namespace Dusharp.Tests
 			// Act and Assert
 
 			union1.Equals(null).Should().BeFalse();
+
 			structUnion1.Equals(null).Should().BeFalse();
+		}
+
+		[Fact]
+		public void Equals_ForDefaultStructUnions_ReturnTrue()
+		{
+			// Arrange
+
+			var structUnion1 = default(TestStructUnion<long>);
+			var structUnion2 = default(TestStructUnion<long>);
+
+			// Act and Assert
+
+			structUnion1.Equals(structUnion2).Should().BeTrue();
+		}
+
+		[Fact]
+		public void Equals_ForDefaultAndCaseStructUnion_ReturnFalse()
+		{
+			// Arrange
+
+			var structUnion1 = TestStructUnion<long>.Case2("value", 1);
+			var structUnion2 = default(TestStructUnion<long>);
+
+			// Act and Assert
+
+			structUnion1.Equals(structUnion2).Should().BeFalse();
 		}
 
 		[Fact]
