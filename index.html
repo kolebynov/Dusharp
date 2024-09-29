@@ -89,16 +89,20 @@ Shape&lt;<span class="hljs-keyword">double</span>&gt; shape2 = Shape&lt;<span cl
 </code></pre>
     <h2 id="struct-unions">Struct unions</h2>
     <p><code>Dusharp</code> supports struct unions, allowing you to reduce allocations. You can define struct union the
-        same way as for class union using the <code>[Dusharp.UnionAttribute]</code> attribute. This feature generates
-        memory efficient unions.</p>
+        same
+        way as for class union using the <code>[Dusharp.UnionAttribute]</code> attribute. This feature generates memory
+        efficient unions.</p>
     <h3 id="blittable-types">Blittable Types</h3>
     <p>Blittable types (e.g., <code>int</code>, <code>double</code>, etc., and structs contain only blittable types)
-        from different cases will share the same memory space using the <code>[StructLayout(LayoutKind.Explicit)]</code>
+        from
+        different cases will share the same memory space using the <code>[StructLayout(LayoutKind.Explicit)]</code>
         attribute. This enables efficient memory usage by overlapping the fields in the union.</p>
     <h3 id="reference-types">Reference Types</h3>
     <p>For reference type parameters, <code>Dusharp</code> uses a shared <code>object</code> fields to store reference
-        type parameters from different cases. The <code>object</code> fields will be cast to their target types using
-        the no-op <code>Unsafe.As</code> method, providing an efficient way to handle reference types in struct unions.
+        type
+        parameters from different cases. The <code>object</code> fields will be cast to their target types using the
+        no-op
+        <code>Unsafe.As</code> method, providing an efficient way to handle reference types in struct unions.
     </p>
     <h3 id="example">Example</h3>
     <p>For instance, consider a union that contains both blittable and reference type parameters:</p>
@@ -135,14 +139,17 @@ Shape&lt;<span class="hljs-keyword">double</span>&gt; shape2 = Shape&lt;<span cl
             references in memory.
         </li>
         <li><code>UnionBlittableDataField</code> is an instance of <code>TestUnionBlittableData</code>, where the
-            blittable data (e.g., <code>long</code>, <code>Guid</code>) is stored.</li>
+            blittable
+            data (e.g., <code>long</code>, <code>Guid</code>) is stored.</li>
         <li><code>Index</code> tracks the active case, allowing the <code>Match</code> and equality methods to know
-            which union case is currently stored.</li>
+            which
+            union case is currently stored.</li>
     </ul>
     <h4 id="memory-layout-optimization-for-blittable-types">Memory Layout Optimization for Blittable Types</h4>
     <p>For blittable types, the generator uses a memory-efficient layout where the fields of different union cases are
         overlapped in memory using the <code>[StructLayout(LayoutKind.Explicit)]</code> attribute. This reduces memory
-        usage by sharing memory space for compatible types.</p>
+        usage
+        by sharing memory space for compatible types.</p>
     <pre><code class="lang-csharp">[<span class="hljs-name">StructLayout</span>(<span class="hljs-name">LayoutKind.Explicit</span>)]
 internal struct TestUnionBlittableData
 {
@@ -172,24 +179,35 @@ internal struct TestUnionBlittableData
             <code>long</code> and <code>Guid</code> types.
         </li>
         <li><code>FieldOffset(0)</code> ensures that the memory space for <code>Case1Data</code> and
-            <code>Case2Data</code> is shared, meaning both cases will occupy the same memory region. This is a key
-            feature that allows for efficient memory usage when dealing with blittable types.
+            <code>Case2Data</code>
+            is shared, meaning both cases will occupy the same memory region. This is a key feature that allows for
+            efficient memory usage when dealing with blittable types.
         </li>
     </ul>
+    <h4 id="size-of-a-union">Size of a union</h4>
     <p>In this example, the size of the <code>TestUnion</code> union is <strong>56 bytes</strong>:</p>
     <ul>
         <li>2 <code>object</code> fields: <strong>16 bytes</strong> (each object reference is <strong>8 bytes</strong>
-            on a 64-bit system)</li>
+            on a
+            64-bit system)</li>
         <li><code>TestUnionBlittableData</code>: <strong>32 bytes</strong> (the size of the largest blittable case,
-            which contains 2 <code>Guid</code> parameters, each being <strong>16 bytes</strong>)</li>
+            which
+            contains 2 <code>Guid</code> parameters, each being <strong>16 bytes</strong>)</li>
         <li><code>Index</code> field: <strong>1 byte</strong> + padding for alignment, which totals <strong>8
-                bytes</strong></li>
+                bytes</strong>
+        </li>
     </ul>
     <p>Thus, the total size is <code>16 + 32 + 8 = 56 bytes</code>.</p>
+    <h4 id="important-note">Important Note</h4>
+    <p>All of these details about memory layout and struct size are implementation-specific and subject to change. Users
+        should not rely on these internal details or use them directly in their code. The behavior and memory management
+        may
+        evolve in future versions to improve performance or efficiency.</p>
     <h2 id="upcoming-features">Upcoming Features</h2>
     <ul>
         <li><strong>JSON serialization/deserialization</strong>: Support for JSON (de)serialization via
-            System.Text.Json.</li>
+            System.Text.Json.
+        </li>
     </ul>
     <h2 id="license">License</h2>
     <p>This project is licensed under the MIT License - see the LICENSE file for details.</p>

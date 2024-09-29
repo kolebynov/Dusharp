@@ -169,6 +169,9 @@ In this example, the size of the `TestUnion` union is **56 bytes**:
 
 Thus, the total size is `16 + 32 + 8 = 56 bytes`.
 
+#### Important Note
+All of these details about memory layout and struct size are implementation-specific and subject to change. Users should not rely on these internal details or use them directly in their code. The behavior and memory management may evolve in future versions to improve performance or efficiency.
+
 ## Upcoming Features
 - **JSON serialization/deserialization**: Support for JSON (de)serialization via System.Text.Json.
 
