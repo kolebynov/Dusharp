@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
 
@@ -21,5 +22,7 @@ public interface IUnionDefinitionGenerator
 	void WriteMatchBlock(UnionCaseInfo unionCase, Func<string, string> matchedCaseDelegateCallProvider,
 		CodeWriter matchBlock);
 
-	TypeDefinition AddAdditionalInfo(TypeDefinition typeDefinition);
+	TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition);
+
+	IReadOnlyList<TypeDefinition> GetAdditionalTypes();
 }

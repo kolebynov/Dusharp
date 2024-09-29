@@ -66,7 +66,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			$"if (!object.ReferenceEquals(unionCase, null)) {{ {matchedCaseDelegateCallProvider(argumentsStr)} }}");
 	}
 
-	public TypeDefinition AddAdditionalInfo(TypeDefinition typeDefinition) =>
+	public TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition) =>
 		typeDefinition with
 		{
 			Constructors =
@@ -79,6 +79,8 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			],
 			NestedTypes = _nestedUnionCaseTypes.Select(x => x.Value).ToArray(),
 		};
+
+	public IReadOnlyList<TypeDefinition> GetAdditionalTypes() => [];
 
 	private static Dictionary<UnionCaseInfo, TypeDefinition> GetUnionCaseNestedTypes(UnionInfo union, string unionTypeName) =>
 		union.Cases.ToDictionary(x => x, x => GetUnionCaseNestedType(x, unionTypeName));
@@ -213,13 +215,10 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			MethodModifier = MethodModifier.Override(),
 			ReturnType = "string",
 			Name = "ToString",
-			BodyWriter = (_, methodBlock) =>
-			{
-				var parametersStr = string.Join(", ", unionCase.Parameters.Select(x => $"{x.Name} = {{{x.Name}}}"));
-				var resultStr = !string.IsNullOrEmpty(parametersStr)
-					? $"$\"{unionCase.Name} {{{{ {parametersStr} }}}}\""
-					: $"\"{unionCase.Name}\"";
-				methodBlock.AppendLine($"return {resultStr};");
-			},
+			BodyWriter = (_, methodBlock) => methodBlock
+				.Append("return ")
+				.Append(UnionGenerationUtils.GetCaseStringRepresentation(
+					unionCase.Name, unionCase.Parameters.Select(x => (x.Name, x.Name)).ToArray()))
+				.AppendLine(";"),
 		};
 }

@@ -13,9 +13,6 @@ public sealed class UnionCodeGenerator
 	private static readonly string ThrowIfNullMethod =
 		$"{typeof(ExceptionUtils).FullName}.{nameof(ExceptionUtils.ThrowIfNull)}";
 
-	private static readonly string ThrowUnionInInvalidStateMethod =
-		$"{typeof(ExceptionUtils).FullName}.{nameof(ExceptionUtils.ThrowUnionInInvalidState)}";
-
 	private readonly TypeCodeWriter _typeCodeWriter;
 	private readonly IUnionDefinitionGeneratorFactory _unionDefinitionGeneratorFactory;
 
@@ -45,6 +42,11 @@ public sealed class UnionCodeGenerator
 				var unionTypeDefinition =
 					new UnionTypeDefinitionGenerator(unionDefinitionGenerator, unionInfo).Generate();
 				_typeCodeWriter.WriteType(unionTypeDefinition, innerBlock);
+
+				foreach (var typeDefinition in unionDefinitionGenerator.GetAdditionalTypes())
+				{
+					_typeCodeWriter.WriteType(typeDefinition, innerBlock);
+				}
 			});
 
 		return codeWriter.ToString();
@@ -90,7 +92,7 @@ public sealed class UnionCodeGenerator
 				Operators = GetEqualityOperators(_nullableUnionTypeName, _unionDefinitionGenerator),
 			};
 
-			return _unionDefinitionGenerator.AddAdditionalInfo(unionTypeDefinition);
+			return _unionDefinitionGenerator.AdjustUnionTypeDefinition(unionTypeDefinition);
 		}
 
 		private MethodDefinition GetUnionCaseMethod(UnionCaseInfo unionCase) =>
@@ -138,7 +140,7 @@ public sealed class UnionCodeGenerator
 							matchBlock);
 					}
 
-					methodBlock.AppendLine($"{ThrowUnionInInvalidStateMethod}();");
+					methodBlock.AppendLine(UnionGenerationUtils.ThrowUnionInInvalidStateCode);
 					if (methodConfiguration.ReturnType != "void")
 					{
 						methodBlock.AppendLine("return default!;");

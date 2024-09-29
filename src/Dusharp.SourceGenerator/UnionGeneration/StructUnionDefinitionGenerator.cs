@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
@@ -110,7 +109,7 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 			.AppendLine(" }");
 	}
 
-	public TypeDefinition AddAdditionalInfo(TypeDefinition typeDefinition)
+	public TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition)
 	{
 		typeDefinition = _unionImplementationGenerator.AdjustUnionTypeDefinition(typeDefinition);
 		return typeDefinition with
@@ -130,8 +129,47 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 					Name = "Index",
 				},
 			],
+			Methods =
+			[
+				.. typeDefinition.Methods,
+				new MethodDefinition
+				{
+					Accessibility = Accessibility.Public,
+					MethodModifier = MethodModifier.Override(),
+					ReturnType = "string",
+					Name = "ToString",
+					BodyWriter = (_, methodBlock) =>
+					{
+						methodBlock.AppendLine("switch (Index)");
+						using (var switchBlock = methodBlock.NewBlock())
+						{
+							foreach (var unionCase in _union.Cases)
+							{
+								var caseParameters = _casesParameters[unionCase];
+								var caseIndex = GetUnionCaseIndex(unionCase);
+								switchBlock
+									.AppendLine($"case {caseIndex}:")
+									.Append("\treturn ")
+									.Append(UnionGenerationUtils.GetCaseStringRepresentation(
+										unionCase.Name,
+										unionCase.Parameters
+											.Zip(caseParameters, (x, y) => (x.Name, y.ValueAccessor))
+											.ToArray()))
+									.AppendLine(";");
+							}
+						}
+
+						methodBlock
+							.AppendLine(UnionGenerationUtils.ThrowUnionInInvalidStateCode)
+							.AppendLine("return null!;");
+					},
+				},
+			],
 		};
 	}
+
+	public IReadOnlyList<TypeDefinition> GetAdditionalTypes() =>
+		_unionImplementationGenerator.GetAdditionalTypes(_unionTypeName.Name);
 
 	private int GetUnionCaseIndex(UnionCaseInfo unionCase) => _union.Cases.IndexOf(unionCase) + 1;
 
@@ -142,7 +180,6 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 
 	private sealed class UnionImplementationGenerator
 	{
-		private const string BlittableStructName = "UnionBlittableData";
 		private const string BlittableStructFieldName = "UnionBlittableDataField";
 
 		private readonly List<DefaultParameterInfo> _defaultParameters = [];
@@ -152,7 +189,7 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 		{
 			switch (caseParameter.Type)
 			{
-				case { IsUnmanagedType: true }:
+				case INamedTypeSymbol { IsUnmanagedType: true }:
 					if (!_blittableParameters.TryGetValue(unionCase, out var blittableStructInfo))
 					{
 						blittableStructInfo = new CaseBlittableStructInfo(
@@ -182,11 +219,10 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 				? new FieldDefinition
 				{
 					Accessibility = Accessibility.Private,
-					TypeName = BlittableStructName,
+					TypeName = GetUnionBlittableDataStructName(typeDefinition.Name),
 					Name = BlittableStructFieldName,
 				}
 				: null;
-			var blittableDataNestedType = GenerateBlittableDataNestedType();
 
 			return typeDefinition with
 			{
@@ -202,12 +238,13 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 						}),
 					.. blittableDataField != null ? [blittableDataField] : Array.Empty<FieldDefinition>(),
 				],
-				NestedTypes =
-				[
-					.. typeDefinition.NestedTypes,
-					.. blittableDataNestedType != null ? [blittableDataNestedType] : Array.Empty<TypeDefinition>(),
-				],
 			};
+		}
+
+		public IReadOnlyList<TypeDefinition> GetAdditionalTypes(string unionName)
+		{
+			var blittableDataNestedType = GenerateBlittableDataNestedType(unionName);
+			return blittableDataNestedType != null ? [blittableDataNestedType] : [];
 		}
 
 		private TypeNamePair GetOrAddDefaultParameter(string typeName, UnionCaseInfo unionCase)
@@ -224,7 +261,7 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 			return defaultParameter.Field;
 		}
 
-		private TypeDefinition? GenerateBlittableDataNestedType()
+		private TypeDefinition? GenerateBlittableDataNestedType(string unionName)
 		{
 			if (_blittableParameters.Count == 0)
 			{
@@ -233,9 +270,9 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 
 			return new TypeDefinition
 			{
-				Accessibility = Accessibility.Private,
+				Accessibility = Accessibility.Internal,
 				Kind = TypeKind.Struct(false),
-				Name = UnionImplementationGenerator.BlittableStructName,
+				Name = GetUnionBlittableDataStructName(unionName),
 				Attributes = [GetLayoutAttribute(LayoutKind.Explicit)],
 				Fields = _blittableParameters.Values
 					.Select(x => new FieldDefinition
@@ -265,6 +302,8 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 					.ToArray(),
 			};
 		}
+
+		private static string GetUnionBlittableDataStructName(string unionName) => $"{unionName}BlittableData";
 
 		private readonly record struct DefaultParameterInfo(TypeNamePair Field, HashSet<UnionCaseInfo> UsedBy);
 

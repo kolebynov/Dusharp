@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using Dusharp.Extensions;
 
@@ -55,7 +54,7 @@ public sealed class CodeWriter : IDisposable
 
 	private CodeWriter Append(string depthStr, string line, bool newLine)
 	{
-		if (line != "}" && _stringBuilder[^(NewLine.Length + 1)] == '}')
+		if (line != "}" && _stringBuilder[^(NewLine.Length + 1)] == '}' && _stringBuilder[^(NewLine.Length + 2)] is '\n' or '\t')
 		{
 			_stringBuilder.AppendLine();
 		}
