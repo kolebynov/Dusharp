@@ -1,3 +1,8 @@
+0.5.0
+------
+
+- Add support for struct unions.
+
 0.4.0
 ------
 

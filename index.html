@@ -15,7 +15,8 @@
     <p><a href="https://www.nuget.org/packages/Dusharp/"><img src="https://img.shields.io/nuget/v/Dusharp"
                 alt="NuGet"></a>
     </p>
-    <p><a href="https://github.com/kolebynov/Dusharp"><strong>Dusharp</strong></a> is a C# source generator library for creating
+    <p><a href="https://github.com/kolebynov/Dusharp"><strong>Dusharp</strong></a> is a C# source generator library for
+        creating
         <strong>discriminated unions</strong>. This
         library
         allows you to define union types with ease, using attributes and partial methods. It is inspired by functional
@@ -26,10 +27,11 @@
         <li>✅ <strong>Create unions</strong>: Define discriminated unions using attributes.</li>
         <li>✅ <strong>Match method</strong>: Pattern match on union cases in a type-safe way.</li>
         <li>✅ <strong>Equality</strong>: Automatic equality comparison for unions.</li>
+        <li>✅ <strong>Generics</strong>: Generics support for union types.</li>
         <li>✅ <strong>Pretty print</strong>: Using overloaded <code>ToString()</code>.</li>
+        <li>✅ <strong>Struct unions</strong>: With efficient memory layout for unions as structs (coming soon).</li>
         <li>❌ <strong>JSON serialization/deserialization</strong>: Support for unions with <code>System.Text.Json</code>
             (coming soon).</li>
-        <li>❌ <strong>Struct unions</strong>: With efficient memory layout for unions as structs (coming soon).</li>
     </ul>
     <h2 id="installation">Installation</h2>
     <p>Dusharp is available as a NuGet package. You can install it using the NuGet package manager:</p>
@@ -40,10 +42,13 @@
         started:</p>
     <h3 id="1-define-a-union">1. Define a Union</h3>
     <p>To define a union, annotate a class with the <code>[Dusharp.UnionAttribute]</code> attribute.</p>
-    <pre><code class="lang-csharp"><span class="hljs-keyword">using</span> Dusharp;
+    <pre><code class="lang-csharp">using Dusharp;
 
 [Union]
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">partial</span> <span class="hljs-keyword">class</span> <span class="hljs-title">Shape</span> { }
+public partial <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Shape</span>&lt;<span class="hljs-title">T</span>&gt;</span>
+    where T : <span class="hljs-class"><span class="hljs-keyword">struct</span>, <span class="hljs-title">INumber</span>&lt;<span class="hljs-title">T</span>&gt;</span>
+{
+}
 </code></pre>
     <h3 id="2-define-union-cases">2. Define Union Cases</h3>
     <p>Define union cases by creating public static partial methods and marking them with the
@@ -52,42 +57,139 @@
     <pre><code class="lang-csharp"><span class="hljs-keyword">using</span> Dusharp;
 
 [Union]
-<span class="hljs-keyword">public</span> <span class="hljs-keyword">partial</span> <span class="hljs-keyword">class</span> <span class="hljs-title">Shape</span>
+<span class="hljs-keyword">public</span> partial <span class="hljs-keyword">class</span> Shape&lt;T&gt;
+    where T : <span class="hljs-keyword">struct</span>, INumber&lt;T&gt;
 {
     [UnionCase]
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> Shape <span class="hljs-title">Circle</span>(<span class="hljs-params"><span class="hljs-keyword">double</span> radius</span>)</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> partial Shape&lt;T&gt; Circle(T radius);
 
     [UnionCase]
-    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> Shape <span class="hljs-title">Rectangle</span>(<span class="hljs-params"><span class="hljs-keyword">double</span> width, <span class="hljs-keyword">double</span> height</span>)</span>;
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> partial Shape&lt;T&gt; Rectangle(T <span class="hljs-built_in">width</span>, T <span class="hljs-built_in">height</span>);
 }
 </code></pre>
     <h3 id="3-match-on-union">3. Match on Union</h3>
     <p>You can easily perform pattern matching on a union using the <code>Match</code> method. The source generator will
         create the <code>Match</code> method based on the defined union cases.</p>
-    <pre><code class="lang-csharp"><span class="hljs-keyword">Shape </span><span class="hljs-keyword">shape </span>= <span class="hljs-keyword">Shape.Circle(5.0);
-</span>
-string result = <span class="hljs-keyword">shape.Match(
-</span>    radius =&gt; $<span class="hljs-string">"Circle with radius {radius}"</span>,
-    (width, height) =&gt; $<span class="hljs-string">"Rectangle with width {width} and height {height}"</span>
-)<span class="hljs-comment">;</span>
+    <pre><code class="lang-csharp">Shape&lt;<span class="hljs-keyword">double</span>&gt; shape = Shape&lt;<span class="hljs-keyword">double</span>&gt;.Circle(<span class="hljs-number">5.0</span>);
 
-Console.WriteLine(result)<span class="hljs-comment">; // Output: Circle with radius 5.0</span>
+<span class="hljs-keyword">string</span> result = shape.Match(
+    radius =&gt; $<span class="hljs-string">"Circle with radius {radius}"</span>,
+    (<span class="hljs-built_in">width</span>, <span class="hljs-built_in">height</span>) =&gt; $<span class="hljs-string">"Rectangle with width {width} and height {height}"</span>);
+
+<span class="hljs-built_in">Console</span>.WriteLine(result); <span class="hljs-comment">// Output: Circle with radius 5.0</span>
 </code></pre>
     <h3 id="4-compare-unions">4. Compare Unions</h3>
     <p>Union cases can be compared for equality using the auto-generated equality methods. This allows for checking if
-        two
-        unions are the same.</p>
-    <pre><code class="lang-csharp"><span class="hljs-built_in">Shape</span> shape1 = <span class="hljs-built_in">Shape</span>.Circle(<span class="hljs-number">5.0</span>);
-<span class="hljs-built_in">Shape</span> shape2 = <span class="hljs-built_in">Shape</span>.Circle(<span class="hljs-number">5.0</span>);
+        two unions are the same.</p>
+    <pre><code class="lang-csharp">Shape&lt;<span class="hljs-keyword">double</span>&gt; shape1 = Shape&lt;<span class="hljs-keyword">double</span>&gt;.Circle(<span class="hljs-number">5.0</span>);
+Shape&lt;<span class="hljs-keyword">double</span>&gt; shape2 = Shape&lt;<span class="hljs-keyword">double</span>&gt;.Circle(<span class="hljs-number">5.0</span>);
 
-bool areEqual = shape1.Equals(shape2); // true
+<span class="hljs-built_in">Console</span>.WriteLine(shape1.Equals(shape2)); <span class="hljs-comment">// True</span>
+<span class="hljs-built_in">Console</span>.WriteLine(shape1 == shape2); <span class="hljs-comment">// True</span>
 </code></pre>
+    <h2 id="struct-unions">Struct unions</h2>
+    <p><code>Dusharp</code> supports struct unions, allowing you to reduce allocations. You can define struct union the
+        same way as for class union using the <code>[Dusharp.UnionAttribute]</code> attribute. This feature generates
+        memory efficient unions.</p>
+    <h3 id="blittable-types">Blittable Types</h3>
+    <p>Blittable types (e.g., <code>int</code>, <code>double</code>, etc., and structs contain only blittable types)
+        from different cases will share the same memory space using the <code>[StructLayout(LayoutKind.Explicit)]</code>
+        attribute. This enables efficient memory usage by overlapping the fields in the union.</p>
+    <h3 id="reference-types">Reference Types</h3>
+    <p>For reference type parameters, <code>Dusharp</code> uses a shared <code>object</code> fields to store reference
+        type parameters from different cases. The <code>object</code> fields will be cast to their target types using
+        the no-op <code>Unsafe.As</code> method, providing an efficient way to handle reference types in struct unions.
+    </p>
+    <h3 id="example">Example</h3>
+    <p>For instance, consider a union that contains both blittable and reference type parameters:</p>
+    <pre><code class="lang-csharp">[Union]
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">partial</span> <span class="hljs-keyword">struct</span> TestUnion
+{
+    [UnionCase]
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> TestUnion <span class="hljs-title">Case1</span>(<span class="hljs-params"><span class="hljs-keyword">long</span> value1, <span class="hljs-keyword">long</span> value2</span>)</span>;
+
+    [UnionCase]
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> TestUnion <span class="hljs-title">Case2</span>(<span class="hljs-params">Guid value1, Guid value2</span>)</span>;
+
+    [UnionCase]
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> TestUnion <span class="hljs-title">Case3</span>(<span class="hljs-params"><span class="hljs-keyword">string</span> <span class="hljs-keyword">value</span>, Exception value2</span>)</span>;
+
+    [UnionCase]
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">partial</span> TestUnion <span class="hljs-title">Case4</span>(<span class="hljs-params">Action <span class="hljs-keyword">value</span></span>)</span>;
+}
+</code></pre>
+    <h4 id="generated-code-explanation">Generated Code Explanation</h4>
+    <p>The source generator produces efficient code for this union by optimizing how blittable and reference types are
+        stored and managed in memory. Here&#39;s the structure of the generated code:</p>
+    <pre><code class="lang-csharp"><span class="hljs-keyword">partial</span> <span class="hljs-keyword">struct</span> TestUnion : System.IEquatable&lt;TestUnion&gt;
+{
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">object</span> Field0;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">object</span> Field1;
+    <span class="hljs-keyword">private</span> TestUnionBlittableData UnionBlittableDataField;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">byte</span> Index;
+}
+</code></pre>
+    <ul>
+        <li><code>Field0</code> and <code>Field1</code> are used to store reference type parameters (e.g.,
+            <code>string</code>, <code>Exception</code>, <code>Action</code>). Reference types share the same object
+            references in memory.
+        </li>
+        <li><code>UnionBlittableDataField</code> is an instance of <code>TestUnionBlittableData</code>, where the
+            blittable data (e.g., <code>long</code>, <code>Guid</code>) is stored.</li>
+        <li><code>Index</code> tracks the active case, allowing the <code>Match</code> and equality methods to know
+            which union case is currently stored.</li>
+    </ul>
+    <h4 id="memory-layout-optimization-for-blittable-types">Memory Layout Optimization for Blittable Types</h4>
+    <p>For blittable types, the generator uses a memory-efficient layout where the fields of different union cases are
+        overlapped in memory using the <code>[StructLayout(LayoutKind.Explicit)]</code> attribute. This reduces memory
+        usage by sharing memory space for compatible types.</p>
+    <pre><code class="lang-csharp">[<span class="hljs-name">StructLayout</span>(<span class="hljs-name">LayoutKind.Explicit</span>)]
+internal struct TestUnionBlittableData
+{
+    [<span class="hljs-name">FieldOffset</span>(<span class="hljs-name">0</span>)]
+    public Case1BlittableData Case1Data<span class="hljs-comment">;</span>
+
+    [<span class="hljs-name">FieldOffset</span>(<span class="hljs-name">0</span>)]
+    public Case2BlittableData Case2Data<span class="hljs-comment">;</span>
+
+    [<span class="hljs-name">StructLayout</span>(<span class="hljs-name">LayoutKind.Auto</span>)]
+    public struct Case1BlittableData
+    {
+        public long value1<span class="hljs-comment">;</span>
+        public long value2<span class="hljs-comment">;</span>
+    }
+
+    [<span class="hljs-name">StructLayout</span>(<span class="hljs-name">LayoutKind.Auto</span>)]
+    public struct Case2BlittableData
+    {
+        public System.Guid value1<span class="hljs-comment">;</span>
+        public System.Guid value2<span class="hljs-comment">;</span>
+    }
+}
+</code></pre>
+    <ul>
+        <li><code>TestUnionBlittableData</code> contains the blittable data for the union cases that involve
+            <code>long</code> and <code>Guid</code> types.
+        </li>
+        <li><code>FieldOffset(0)</code> ensures that the memory space for <code>Case1Data</code> and
+            <code>Case2Data</code> is shared, meaning both cases will occupy the same memory region. This is a key
+            feature that allows for efficient memory usage when dealing with blittable types.
+        </li>
+    </ul>
+    <p>In this example, the size of the <code>TestUnion</code> union is <strong>56 bytes</strong>:</p>
+    <ul>
+        <li>2 <code>object</code> fields: <strong>16 bytes</strong> (each object reference is <strong>8 bytes</strong>
+            on a 64-bit system)</li>
+        <li><code>TestUnionBlittableData</code>: <strong>32 bytes</strong> (the size of the largest blittable case,
+            which contains 2 <code>Guid</code> parameters, each being <strong>16 bytes</strong>)</li>
+        <li><code>Index</code> field: <strong>1 byte</strong> + padding for alignment, which totals <strong>8
+                bytes</strong></li>
+    </ul>
+    <p>Thus, the total size is <code>16 + 32 + 8 = 56 bytes</code>.</p>
     <h2 id="upcoming-features">Upcoming Features</h2>
     <ul>
         <li><strong>JSON serialization/deserialization</strong>: Support for JSON (de)serialization via
-            System.Text.Json.
-        </li>
-        <li><strong>Struct unions</strong>: More efficient unions using structs with effective data layout.</li>
+            System.Text.Json.</li>
     </ul>
     <h2 id="license">License</h2>
     <p>This project is licensed under the MIT License - see the LICENSE file for details.</p>
