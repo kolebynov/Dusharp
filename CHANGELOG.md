@@ -1,3 +1,8 @@
+0.5.1
+------
+
+- Downgrade required version of `Microsoft.CodeAnalysis.CSharp`.
+
 0.5.0
 ------
 
