@@ -1,3 +1,8 @@
+0.5.2
+------
+
+- Remove using of `System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode` as default hash code implementation for class unions.
+
 0.5.1
 ------
 

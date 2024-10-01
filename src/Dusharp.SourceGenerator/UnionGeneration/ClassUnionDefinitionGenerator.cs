@@ -44,8 +44,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		};
 
 	public Action<MethodDefinition, CodeWriter> GetGetHashCodeMethodBodyWriter() =>
-		static (_, methodBlock) =>
-			methodBlock.AppendLine("return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);");
+		static (_, methodBlock) => methodBlock.AppendLine("return 0;");
 
 	public Action<OperatorDefinition, CodeWriter> GetEqualityOperatorBodyWriter() =>
 		static (def, operatorBodyBlock) =>
@@ -140,9 +139,24 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 	private static MethodDefinition[] GetUnionCaseEqualsMethods(
 		UnionCaseInfo unionCase, UnionInfo union, string caseClassName, string unionTypeName)
 	{
+		var getHashCodeMethodDefinition = new MethodDefinition
+		{
+			Accessibility = Accessibility.Public,
+			MethodModifier = MethodModifier.Override(),
+			ReturnType = "int",
+			Name = "GetHashCode",
+			BodyWriter = (_, methodBlock) =>
+			{
+				var caseIndex = union.Cases.IndexOf(unionCase) + 1;
+				methodBlock.AppendLine(
+					UnionGenerationUtils.GetUnionCaseHashCodeCode(
+						caseIndex, unionCase.Parameters.Select(x => (x.TypeName, x.Name))));
+			},
+		};
+
 		if (!unionCase.HasParameters)
 		{
-			return [];
+			return [getHashCodeMethodDefinition];
 		}
 
 		const string structuralEqualsMethod = "StructuralEquals";
@@ -166,20 +180,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 				Parameters = [new MethodParameter("object?", "other")],
 				BodyWriter = (_, methodBlock) => WriteEqualsMethodBody(caseClassName, methodBlock),
 			},
-			new MethodDefinition
-			{
-				Accessibility = Accessibility.Public,
-				MethodModifier = MethodModifier.Override(),
-				ReturnType = "int",
-				Name = "GetHashCode",
-				BodyWriter = (_, methodBlock) =>
-				{
-					var caseIndex = union.Cases.IndexOf(unionCase) + 1;
-					methodBlock.AppendLine(
-						UnionGenerationUtils.GetUnionCaseHashCodeCode(
-							caseIndex, unionCase.Parameters.Select(x => (x.TypeName, x.Name))));
-				},
-			},
+			getHashCodeMethodDefinition,
 			new MethodDefinition
 			{
 				Accessibility = Accessibility.Private,
