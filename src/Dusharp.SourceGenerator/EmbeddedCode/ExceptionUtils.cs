@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Dusharp
 {
-	public static class ExceptionUtils
+	internal static class ExceptionUtils
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void ThrowIfNull<T>(this T? value, string paramName)

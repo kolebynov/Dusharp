@@ -4,7 +4,7 @@ using System;
 namespace Dusharp
 {
 	[AttributeUsage(AttributeTargets.Method)]
-	public sealed class UnionCaseAttribute : Attribute
+	internal sealed class UnionCaseAttribute : Attribute
 	{
 	}
 }

@@ -1,3 +1,8 @@
+0.5.3
+------
+
+- Make generated helper classes and attributes internal.
+
 0.5.2
 ------
 
