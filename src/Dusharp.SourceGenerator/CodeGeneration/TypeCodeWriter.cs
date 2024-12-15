@@ -24,6 +24,11 @@ public sealed class TypeCodeWriter
 			WriteField(fieldDefinition, typeBodyBlock);
 		}
 
+		foreach (var propertyDefinition in typeDefinition.Properties)
+		{
+			WriteProperty(propertyDefinition, typeBodyBlock);
+		}
+
 		foreach (var constructorDefinition in typeDefinition.Constructors)
 		{
 			WriteConstructor(constructorDefinition, typeDefinition, typeBodyBlock);
@@ -87,6 +92,59 @@ public sealed class TypeCodeWriter
 			.Add(fieldDefinition.Name)
 			.AddIf(fieldDefinition.Initializer != null, () => "=", () => fieldDefinition.Initializer!);
 		typeBodyBlock.AppendLine($"{declarationBuilder};");
+	}
+
+	private static void WriteProperty(PropertyDefinition propertyDefinition, CodeWriter typeBodyBlock)
+	{
+		foreach (var attribute in propertyDefinition.Attributes)
+		{
+			WriteAttribute(attribute, typeBodyBlock);
+		}
+
+		var declarationBuilder = new DeclarationBuilder()
+			.AddIf(propertyDefinition.Accessibility != null, () => propertyDefinition.Accessibility!.Value.ToCodeString())
+			.AddIf(propertyDefinition.IsStatic, () => "static")
+			.Add(propertyDefinition.TypeName)
+			.Add(propertyDefinition.Name);
+		typeBodyBlock.AppendLine(declarationBuilder.ToString());
+		using (var propertyBodyBlock = typeBodyBlock.NewBlock())
+		{
+			if (propertyDefinition.Getter != null)
+			{
+				WritePropertyAccessor(propertyDefinition.Getter.Value, "get", propertyBodyBlock, propertyDefinition);
+			}
+
+			if (propertyDefinition.Setter != null)
+			{
+				WritePropertyAccessor(propertyDefinition.Setter.Value, "set", propertyBodyBlock, propertyDefinition);
+			}
+		}
+
+		if (propertyDefinition.Initializer != null)
+		{
+			typeBodyBlock.AppendLine($" = {propertyDefinition.Initializer};");
+		}
+
+		return;
+
+		static void WritePropertyAccessor(PropertyDefinition.PropertyAccessor propertyAccessor, string accessorName,
+			CodeWriter propertyBodyBlock, PropertyDefinition propertyDefinition)
+		{
+			if (propertyAccessor.Accessibility != null)
+			{
+				propertyBodyBlock.Append($"{propertyAccessor.Accessibility.Value.ToCodeString()} ");
+			}
+
+			propertyBodyBlock.Append(accessorName);
+			propertyAccessor.Impl.Match(
+				() => propertyBodyBlock.AppendLine(";"),
+				bodyWriter =>
+				{
+					propertyBodyBlock.AppendLine();
+					using var accessorBodyBlock = propertyBodyBlock.NewBlock();
+					bodyWriter(propertyDefinition, accessorBodyBlock);
+				});
+		}
 	}
 
 	private static void WriteConstructor(ConstructorDefinition constructorDefinition, TypeDefinition typeDefinition,
@@ -157,7 +215,13 @@ public sealed class TypeCodeWriter
 	}
 
 	private static string ToParametersString(IReadOnlyList<MethodParameter> methodParameters) =>
-		string.Join(", ", methodParameters.Select(x => $"{x.TypeName} {x.Name}"));
+		string.Join(", ", methodParameters.Select(x =>
+		{
+			var modifierStr = x.Modifier == null
+				? string.Empty
+				: $"{x.Modifier.Value.Match(() => "in", () => "ref", () => "out")} ";
+			return $"{modifierStr}{x.TypeName} {x.Name}";
+		}));
 
 	private sealed class DeclarationBuilder
 	{

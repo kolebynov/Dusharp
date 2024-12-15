@@ -28,6 +28,19 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			: $"return {nestedUnionCaseType.FullName}.Instance;");
 	}
 
+	public string GetUnionCaseCheckExpression(UnionCaseInfo unionCase)
+	{
+		var caseNestedType = _nestedUnionCaseTypes[unionCase];
+		return $"this is {caseNestedType.FullName}";
+	}
+
+	public IEnumerable<string> GetUnionCaseParameterAccessors(UnionCaseInfo unionCase)
+	{
+		var caseNestedType = _nestedUnionCaseTypes[unionCase];
+		return unionCase.Parameters
+			.Select(x => $"System.Runtime.CompilerServices.Unsafe.As<{caseNestedType.FullName}>(this).{x.Name}");
+	}
+
 	public MethodDefinition AdjustDefaultEqualsMethod(MethodDefinition equalsMethod) =>
 		equalsMethod with
 		{
@@ -54,16 +67,6 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			operatorBodyBlock.AppendLine(
 				$"return !object.ReferenceEquals({leftName}, null) ? left.Equals({rightName}) : object.ReferenceEquals({leftName}, {rightName});");
 		};
-
-	public void WriteMatchBlock(UnionCaseInfo unionCase, Func<string, string> matchedCaseDelegateCallProvider,
-		CodeWriter matchBlock)
-	{
-		var caseNestedType = _nestedUnionCaseTypes[unionCase];
-		matchBlock.AppendLine($"var unionCase = this as {caseNestedType.FullName};");
-		var argumentsStr = string.Join(", ", unionCase.Parameters.Select(x => $"unionCase.{x.Name}"));
-		matchBlock.AppendLine(
-			$"if (!object.ReferenceEquals(unionCase, null)) {{ {matchedCaseDelegateCallProvider(argumentsStr)} }}");
-	}
 
 	public TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition) =>
 		typeDefinition with

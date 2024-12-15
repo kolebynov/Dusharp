@@ -4,6 +4,7 @@ using System.Linq;
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
 using Dusharp.Extensions;
+using Dusharp.SourceGenerator.Common;
 using Microsoft.CodeAnalysis;
 
 namespace Dusharp.UnionGeneration;
@@ -77,7 +78,8 @@ public sealed class UnionCodeGenerator
 				Kind = _unionDefinitionGenerator.TypeKind,
 				IsPartial = true,
 				GenericParameters = _union.TypeSymbol.TypeParameters.Select(x => x.Name).ToArray(),
-				InheritedTypes = [$"System.IEquatable<{_unionTypeName.FullName}>"],
+				InheritedTypes = [$"System.IEquatable<{_unionTypeName.FullName}>", "global::Dusharp.IUnion"],
+				Properties = _union.Cases.Select(GetIsCaseProperty).ToArray(),
 				Methods = _union.Cases
 					.Select(GetUnionCaseMethod)
 					.Concat(
@@ -87,6 +89,7 @@ public sealed class UnionCodeGenerator
 						GetMatchMethod(MatchMethodConfiguration.WithStateWithoutReturn),
 						GetMatchMethod(MatchMethodConfiguration.WithStateWithReturn),
 					])
+					.Concat(_union.Cases.Select(GetTryGetCaseDataMethod))
 					.Concat(GetDefaultEqualsMethods())
 					.ToArray(),
 				Operators = GetEqualityOperators(_nullableUnionTypeName, _unionDefinitionGenerator),
@@ -95,8 +98,20 @@ public sealed class UnionCodeGenerator
 			return _unionDefinitionGenerator.AdjustUnionTypeDefinition(unionTypeDefinition);
 		}
 
+		private PropertyDefinition GetIsCaseProperty(UnionCaseInfo unionCase) =>
+			new()
+			{
+				Name = UnionNamesProvider.GetIsCasePropertyName(unionCase.Name),
+				Accessibility = Accessibility.Public,
+				TypeName = "bool",
+				Getter = new PropertyDefinition.PropertyAccessor(
+					null,
+					PropertyDefinition.PropertyAccessorImpl.Bodied((_, bodyBlock) =>
+						bodyBlock.AppendLine($"return {_unionDefinitionGenerator.GetUnionCaseCheckExpression(unionCase)};"))),
+			};
+
 		private MethodDefinition GetUnionCaseMethod(UnionCaseInfo unionCase) =>
-			new MethodDefinition
+			new()
 			{
 				Name = unionCase.Name,
 				ReturnType = _unionTypeName.FullName,
@@ -133,11 +148,11 @@ public sealed class UnionCodeGenerator
 					methodBlock.AppendLine();
 					foreach (var (unionCase, parameterName) in _union.Cases.Zip(matchDelegateParameters, (x, y) => (x, y.Name)))
 					{
-						using var matchBlock = methodBlock.NewBlock();
-						_unionDefinitionGenerator.WriteMatchBlock(
-							unionCase,
-							argumentsStr => methodConfiguration.MatchBodyProvider(parameterName, argumentsStr),
-							matchBlock);
+						methodBlock.AppendLine($"if ({UnionNamesProvider.GetIsCasePropertyName(unionCase.Name)})");
+						using var thenBlock = methodBlock.NewBlock();
+						var argumentsStr = string.Join(
+							", ", _unionDefinitionGenerator.GetUnionCaseParameterAccessors(unionCase));
+						thenBlock.AppendLine(methodConfiguration.MatchBodyProvider(parameterName, argumentsStr));
 					}
 
 					methodBlock.AppendLine(UnionGenerationUtils.ThrowUnionInInvalidStateCode);
@@ -148,6 +163,38 @@ public sealed class UnionCodeGenerator
 				},
 			};
 		}
+
+		private MethodDefinition GetTryGetCaseDataMethod(UnionCaseInfo unionCase) =>
+			new()
+			{
+				Name = UnionNamesProvider.GetTryGetCaseDataMethodName(unionCase.Name),
+				ReturnType = "bool",
+				Accessibility = Accessibility.Public,
+				Parameters = unionCase.Parameters
+					.Select(x => new MethodParameter(x.TypeName, x.Name, MethodParameterModifier.Out()))
+					.ToArray(),
+				BodyWriter = (_, methodBodyBlock) =>
+				{
+					methodBodyBlock.AppendLine($"if ({UnionNamesProvider.GetIsCasePropertyName(unionCase.Name)})");
+					using (var thenBlock = methodBodyBlock.NewBlock())
+					{
+						foreach (var (parameter, accessor) in unionCase.Parameters
+							         .Zip(_unionDefinitionGenerator.GetUnionCaseParameterAccessors(unionCase), (x, y) => (x, y)))
+						{
+							thenBlock.AppendLine($"{parameter.Name} = {accessor};");
+						}
+
+						thenBlock.AppendLine("return true;");
+					}
+
+					foreach (var parameter in unionCase.Parameters)
+					{
+						methodBodyBlock.AppendLine($"{parameter.Name} = default({parameter.TypeName})!;");
+					}
+
+					methodBodyBlock.AppendLine("return false;");
+				},
+			};
 
 		private MethodDefinition[] GetDefaultEqualsMethods() =>
 		[

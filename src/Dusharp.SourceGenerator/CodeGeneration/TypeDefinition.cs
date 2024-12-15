@@ -25,6 +25,8 @@ public sealed record class TypeDefinition
 
 	public IReadOnlyList<FieldDefinition> Fields { get; init; } = [];
 
+	public IReadOnlyList<PropertyDefinition> Properties { get; init; } = [];
+
 	public IReadOnlyList<ConstructorDefinition> Constructors { get; init; } = [];
 
 	public IReadOnlyList<MethodDefinition> Methods { get; init; } = [];

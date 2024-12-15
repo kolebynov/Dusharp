@@ -11,6 +11,10 @@ public interface IUnionDefinitionGenerator
 
 	Action<MethodDefinition, CodeWriter> GetUnionCaseMethodBodyWriter(UnionCaseInfo unionCase);
 
+	string GetUnionCaseCheckExpression(UnionCaseInfo unionCase);
+
+	IEnumerable<string> GetUnionCaseParameterAccessors(UnionCaseInfo unionCase);
+
 	MethodDefinition AdjustDefaultEqualsMethod(MethodDefinition equalsMethod);
 
 	MethodDefinition AdjustSpecificEqualsMethod(MethodDefinition equalsMethod);
@@ -18,9 +22,6 @@ public interface IUnionDefinitionGenerator
 	Action<MethodDefinition, CodeWriter> GetGetHashCodeMethodBodyWriter();
 
 	Action<OperatorDefinition, CodeWriter> GetEqualityOperatorBodyWriter();
-
-	void WriteMatchBlock(UnionCaseInfo unionCase, Func<string, string> matchedCaseDelegateCallProvider,
-		CodeWriter matchBlock);
 
 	TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition);
 

@@ -61,6 +61,18 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 		};
 	}
 
+	public string GetUnionCaseCheckExpression(UnionCaseInfo unionCase)
+	{
+		var unionCaseIndex = GetUnionCaseIndex(unionCase);
+		return $"Index == {unionCaseIndex}";
+	}
+
+	public IEnumerable<string> GetUnionCaseParameterAccessors(UnionCaseInfo unionCase)
+	{
+		var caseParameters = _casesParameters[unionCase];
+		return caseParameters.Select(x => x.ValueAccessor("this"));
+	}
+
 	public MethodDefinition AdjustDefaultEqualsMethod(MethodDefinition equalsMethod) =>
 		equalsMethod with
 		{
@@ -120,20 +132,6 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 			.Append(".Equals(")
 			.Append(def.Parameters[1].Name)
 			.AppendLine(");");
-
-	public void WriteMatchBlock(UnionCaseInfo unionCase, Func<string, string> matchedCaseDelegateCallProvider,
-		CodeWriter matchBlock)
-	{
-		var unionCaseIndex = GetUnionCaseIndex(unionCase);
-		var caseParameters = _casesParameters[unionCase];
-		var argumentsStr = string.Join(", ", caseParameters.Select(x => x.ValueAccessor("this")));
-		matchBlock
-			.Append("if (Index == ")
-			.Append(unionCaseIndex.ToString(CultureInfo.InvariantCulture))
-			.Append(") { ")
-			.Append(matchedCaseDelegateCallProvider(argumentsStr))
-			.AppendLine(" }");
-	}
 
 	public TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition)
 	{
