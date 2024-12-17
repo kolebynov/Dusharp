@@ -24,15 +24,9 @@ public sealed class UnionCodeGenerator
 		_unionDefinitionGeneratorFactory = unionDefinitionGeneratorFactory;
 	}
 
-	public string? GenerateUnion(UnionInfo unionInfo)
+	public string GenerateUnion(UnionInfo unionInfo)
 	{
-		return unionInfo.Cases.Count == 0 ? null : GenerateUnionImpl(unionInfo);
-	}
-
-	private string GenerateUnionImpl(UnionInfo unionInfo)
-	{
-		using var codeWriter = new CodeWriter();
-		codeWriter.AppendLine("#nullable enable");
+		using var codeWriter = CodeWriter.CreateWithDefaultLines();
 
 		CodeWritingUtils.WriteOuterBlocks(
 			unionInfo.TypeSymbol, codeWriter,

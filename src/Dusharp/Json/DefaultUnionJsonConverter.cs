@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dusharp.SourceGenerator.Common;
@@ -21,18 +20,9 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 	public override IUnion? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var unionConverter = GetConverter(typeToConvert);
-		if (reader.TokenType is not JsonTokenType.StartObject and not JsonTokenType.String)
-		{
-			throw new JsonException(
-				$"""Invalid start token "{reader.TokenType}" when deserializing "{unionConverter.UnionType.Name}" union. Expected "StartObject" or "String".""");
-		}
-
+		JsonConverterHelpers.BeforeRead(ref reader, unionConverter.UnionType);
 		var value = unionConverter.Deserializer(ref reader, options);
-		if (!reader.Read() || reader.TokenType != JsonTokenType.EndObject)
-		{
-			throw new JsonException(
-				$"""Unexpected end of union JSON. Token: "{reader.TokenType}", union: "{unionConverter.UnionType.Name}".""");
-		}
+		JsonConverterHelpers.AfterRead(ref reader, unionConverter.UnionType);
 
 		return value;
 	}
@@ -82,9 +72,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 
 				var serializeCaseExpr = unionCase.Parameters.Length switch
 				{
-					0 => GetParameterlessCaseSerializeExpression(unionCase.JsonEncodedName, writerExpr),
-					1 => GetSingleParameterCaseSerializeExpression(unionCase.JsonEncodedName, unionCase.Parameters[0],
-						caseParameterVariableExprs[0], writerExpr, jsonOptionsExpr),
+					0 => GetParameterlessCaseSerializeExpression(unionCase.EncodedName.EncodedValue, writerExpr),
 					_ => GetMultipleParametersCaseSerializeExpression(unionCase, caseParameterVariableExprs, writerExpr,
 						jsonOptionsExpr),
 				};
@@ -100,7 +88,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 
 		var serializerBody = Expression.Block([
 			..serializeCasesExprs,
-			Expression.Call(null, UnionConverterGenerationHelpers.WriteEmptyObjectMethodInfo, writerExpr),
+			Expression.Call(null, JsonConverterHelpers.WriteEmptyObjectMethodInfo, writerExpr),
 			Expression.Label(returnLabel),
 		]);
 
@@ -111,40 +99,28 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 
 	private static Expression GetParameterlessCaseSerializeExpression(
 		JsonEncodedText unionCaseName, ParameterExpression writerExpr) =>
-		Expression.Call(writerExpr, UnionConverterGenerationHelpers.WriteStringValueMethodInfo, Expression.Constant(unionCaseName));
-
-	private static Expression GetSingleParameterCaseSerializeExpression(
-		JsonEncodedText unionCaseName, UnionCaseParameterInfo parameterInfo, ParameterExpression parameterVariableExpr,
-		ParameterExpression writerExpr, ParameterExpression jsonOptionsExpr)
-	{
-		var writeObjectWithSinglePropertyMethodInfo =
-			UnionConverterGenerationHelpers.WriteObjectWithSinglePropertyGenericMethodInfo.MakeGenericMethod(
-				parameterInfo.ParameterType);
-
-		return Expression.Call(null, writeObjectWithSinglePropertyMethodInfo, writerExpr,
-			Expression.Constant(unionCaseName), parameterVariableExpr, jsonOptionsExpr);
-	}
+		Expression.Call(writerExpr, JsonConverterHelpers.WriteStringValueMethodInfo, Expression.Constant(unionCaseName));
 
 	private static Expression GetMultipleParametersCaseSerializeExpression(
 		UnionCaseInfo unionCase, ParameterExpression[] caseParameterVariableExprs, ParameterExpression writerExpr,
 		ParameterExpression jsonOptionsExpr) =>
 		Expression.Block([
-			Expression.Call(writerExpr, UnionConverterGenerationHelpers.WriteStartObjectMethodInfo),
-			Expression.Call(writerExpr, UnionConverterGenerationHelpers.WriteStartObjectWithPropertyMethodInfo,
-				Expression.Constant(unionCase.JsonEncodedName)),
+			Expression.Call(writerExpr, JsonConverterHelpers.WriteStartObjectMethodInfo),
+			Expression.Call(writerExpr, JsonConverterHelpers.WriteStartObjectWithPropertyMethodInfo,
+				Expression.Constant(unionCase.EncodedName.EncodedValue)),
 			..unionCase.Parameters
 				.Zip(caseParameterVariableExprs, (x, y) => (x, y))
 				.Select(Expression (x) =>
 				{
 					var (parameter, variable) = x;
-					var writePropertyMethodInfo = UnionConverterGenerationHelpers.WritePropertyGenericMethodInfo
+					var writePropertyMethodInfo = JsonConverterHelpers.WritePropertyGenericMethodInfo
 						.MakeGenericMethod(parameter.ParameterType);
 
 					return Expression.Call(null, writePropertyMethodInfo, writerExpr,
-						Expression.Constant(parameter.JsonEncodedName), variable, jsonOptionsExpr);
+						Expression.Constant(parameter.EncodedName.EncodedValue), variable, jsonOptionsExpr);
 				}),
-			Expression.Call(writerExpr, UnionConverterGenerationHelpers.WriteEndObjectMethodInfo),
-			Expression.Call(writerExpr, UnionConverterGenerationHelpers.WriteEndObjectMethodInfo),
+			Expression.Call(writerExpr, JsonConverterHelpers.WriteEndObjectMethodInfo),
+			Expression.Call(writerExpr, JsonConverterHelpers.WriteEndObjectMethodInfo),
 		]);
 
 	private static DeserializeCaseDelegate CreateDeserializer(
@@ -158,8 +134,8 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 			.Where(x => x.Parameters.Length == 0)
 			.Select(Expression (unionCase) =>
 				Expression.Condition(
-					Expression.Call(null, UnionConverterGenerationHelpers.ValueTextEqualsMethodInfo, readerExpr,
-						Expression.Constant(unionCase.Utf8Name)),
+					Expression.Call(null, JsonConverterHelpers.ValueTextEqualsMethodInfo, readerExpr,
+						Expression.Constant(unionCase.EncodedName.Utf8Value)),
 					Expression.Return(
 						returnLabel,
 						Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(IUnion))),
@@ -169,22 +145,14 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 			.Where(x => x.Parameters.Length > 0)
 			.Select(unionCase =>
 			{
-				var deserializeExpression = unionCase.Parameters.Length switch
-				{
-					1 => Expression.Call(null, unionCase.CreateCaseMethod,
-						Expression.Call(
-							null,
-							UnionConverterGenerationHelpers.DeserializeGenericMethodInfo
-								.MakeGenericMethod(unionCase.Parameters[0].ParameterType),
-							readerExpr, jsonOptionsExpr)),
-					_ => GetDeserializeMultipleParametersCaseExpression(unionCase, unionType, readerExpr, jsonOptionsExpr),
-				};
+				var deserializeExpression = GetDeserializeMultipleParametersCaseExpression(unionCase, unionType,
+					readerExpr, jsonOptionsExpr);
 
 				return Expression.Condition(
-					Expression.Call(null, UnionConverterGenerationHelpers.ValueTextEqualsMethodInfo, readerExpr,
-						Expression.Constant(unionCase.Utf8Name)),
+					Expression.Call(null, JsonConverterHelpers.ValueTextEqualsMethodInfo, readerExpr,
+						Expression.Constant(unionCase.EncodedName.Utf8Value)),
 					Expression.Block(
-						Expression.Call(readerExpr, UnionConverterGenerationHelpers.ReadMethodInfo),
+						Expression.Call(readerExpr, JsonConverterHelpers.ReadMethodInfo),
 						Expression.Return(returnLabel, Expression.Convert(deserializeExpression, typeof(IUnion)))),
 					Expression.Empty());
 			});
@@ -193,23 +161,23 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		var deserializeUnionBody = Expression.Block(
 			Expression.Condition(
 				Expression.Equal(
-					Expression.Property(readerExpr, UnionConverterGenerationHelpers.TokenTypePropertyInfo),
+					Expression.Property(readerExpr, JsonConverterHelpers.TokenTypePropertyInfo),
 					Expression.Constant(JsonTokenType.String)),
 				Expression.Block([
 					..parameterlessCasesDeserializeExprs,
 					Expression.Call(
-						null, UnionConverterGenerationHelpers.ThrowInvalidParameterlessCaseNameMethodInfo, readerExpr,
+						null, JsonConverterHelpers.ThrowInvalidParameterlessCaseNameMethodInfo, readerExpr,
 						unionTypeExpr)
 				]),
 				Expression.Block([
 					Expression.Condition(
-						Expression.Call(null, UnionConverterGenerationHelpers.ReadAndTokenIsPropertyNameMethodInfo,
+						Expression.Call(null, JsonConverterHelpers.ReadAndTokenIsPropertyNameMethodInfo,
 							readerExpr),
 						Expression.Empty(),
-						Expression.Call(null, UnionConverterGenerationHelpers.ThrowInvalidUnionJsonObjectMethodInfo,
+						Expression.Call(null, JsonConverterHelpers.ThrowInvalidUnionJsonObjectMethodInfo,
 							readerExpr)),
 					..withParametersCasesDeserializeExprs,
-					Expression.Call(null, UnionConverterGenerationHelpers.ThrowInvalidCaseNameMethodInfo, readerExpr,
+					Expression.Call(null, JsonConverterHelpers.ThrowInvalidCaseNameMethodInfo, readerExpr,
 						unionTypeExpr),
 				])),
 			Expression.Label(returnLabel, Expression.Constant(null, typeof(IUnion))));
@@ -232,12 +200,12 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 			.Select(Expression (x) =>
 			{
 				var (parameter, variableExpr) = x;
-				var deserializeMethodInfo = UnionConverterGenerationHelpers.DeserializeGenericMethodInfo
+				var deserializeMethodInfo = JsonConverterHelpers.DeserializeGenericMethodInfo
 					.MakeGenericMethod(parameter.ParameterType);
 
 				return Expression.Condition(
-					Expression.Call(null, UnionConverterGenerationHelpers.ValueTextEqualsMethodInfo, readerExpr,
-						Expression.Constant(parameter.Utf8Name)),
+					Expression.Call(null, JsonConverterHelpers.ValueTextEqualsMethodInfo, readerExpr,
+						Expression.Constant(parameter.EncodedName.Utf8Value)),
 					Expression.Block(
 						Expression.Assign(
 							variableExpr,
@@ -253,13 +221,13 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 			Expression.Assign(deserializedParametersCountExpr, Expression.Constant(0)),
 			Expression.Loop(
 				Expression.Condition(
-					Expression.Call(null, UnionConverterGenerationHelpers.ReadAndTokenIsPropertyNameMethodInfo, readerExpr),
+					Expression.Call(null, JsonConverterHelpers.ReadAndTokenIsPropertyNameMethodInfo, readerExpr),
 					Expression.Block(deserializeParameterExprs),
 					Expression.Break(breakLabel)),
 				breakLabel, continueLabel),
 			Expression.Condition(
 				Expression.LessThan(deserializedParametersCountExpr, Expression.Constant(unionCase.Parameters.Length)),
-				Expression.Call(null, UnionConverterGenerationHelpers.ThrowNotAllCaseParametersPresentMethodInfo,
+				Expression.Call(null, JsonConverterHelpers.ThrowNotAllCaseParametersPresentMethodInfo,
 					Expression.Constant(unionType), Expression.Constant(unionCase.Name),
 					deserializedParametersCountExpr, Expression.Constant(unionCase.Parameters.Length)),
 				Expression.Empty()),
@@ -290,9 +258,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 	{
 		public string Name { get; }
 
-		public JsonEncodedText JsonEncodedName { get; }
-
-		public byte[] Utf8Name { get; }
+		public JsonEncodedValue EncodedName { get; }
 
 		public Type ParameterType { get; }
 
@@ -300,8 +266,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		{
 			Name = name;
 			ParameterType = parameterType;
-			JsonEncodedName = JsonEncodedText.Encode(name);
-			Utf8Name = Encoding.UTF8.GetBytes(name);
+			EncodedName = new JsonEncodedValue(name);
 		}
 	}
 
@@ -309,9 +274,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 	{
 		public string Name { get; }
 
-		public JsonEncodedText JsonEncodedName { get; }
-
-		public byte[] Utf8Name { get; }
+		public JsonEncodedValue EncodedName { get; }
 
 		public MethodInfo CreateCaseMethod { get; }
 
@@ -322,8 +285,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		public UnionCaseInfo(MethodInfo createCaseMethod)
 		{
 			Name = createCaseMethod.Name;
-			JsonEncodedName = JsonEncodedText.Encode(Name);
-			Utf8Name = Encoding.UTF8.GetBytes(Name);
+			EncodedName = new JsonEncodedValue(Name);
 			CreateCaseMethod = createCaseMethod;
 			TryGetDataMethod = createCaseMethod.DeclaringType!.GetMethod(
 				UnionNamesProvider.GetTryGetCaseDataMethodName(Name), BindingFlags.Public | BindingFlags.Instance)!;
