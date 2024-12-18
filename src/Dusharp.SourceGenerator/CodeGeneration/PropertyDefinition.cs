@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Dusharp.CodeAnalyzing;
 using Microsoft.CodeAnalysis;
 
 namespace Dusharp.CodeGeneration;
@@ -10,7 +11,7 @@ public sealed partial class PropertyDefinition
 
 	public bool IsStatic { get; init; }
 
-	public required string TypeName { get; init; }
+	public required TypeName TypeName { get; init; }
 
 	public required string Name { get; init; }
 

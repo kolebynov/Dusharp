@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Dusharp.CodeAnalyzing;
 using Microsoft.CodeAnalysis;
 
 namespace Dusharp.CodeGeneration;
@@ -8,7 +9,7 @@ public sealed record class MethodDefinition
 {
 	public Accessibility? Accessibility { get; init; }
 
-	public required string ReturnType { get; init; }
+	public required TypeName ReturnType { get; init; }
 
 	public required string Name { get; init; }
 

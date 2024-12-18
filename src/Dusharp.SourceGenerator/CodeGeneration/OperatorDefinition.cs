@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Dusharp.CodeAnalyzing;
 
 namespace Dusharp.CodeGeneration;
 
 public sealed class OperatorDefinition
 {
-	public required string ReturnType { get; init; }
+	public required TypeName ReturnType { get; init; }
 
 	public required string Name { get; init; }
 

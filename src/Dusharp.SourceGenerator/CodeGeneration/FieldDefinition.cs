@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Dusharp.CodeAnalyzing;
 using Microsoft.CodeAnalysis;
 
 namespace Dusharp.CodeGeneration;
@@ -11,7 +12,7 @@ public sealed class FieldDefinition
 
 	public bool IsReadOnly { get; init; }
 
-	public required string TypeName { get; init; }
+	public required TypeName TypeName { get; init; }
 
 	public required string Name { get; init; }
 

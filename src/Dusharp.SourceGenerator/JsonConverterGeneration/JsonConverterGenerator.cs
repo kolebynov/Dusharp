@@ -25,8 +25,8 @@ public sealed class JsonConverterGenerator
 	{
 		using var codeWriter = CodeWriter.CreateWithDefaultLines();
 
-		CodeWritingUtils.WriteOuterBlocks(
-			union.TypeSymbol, codeWriter,
+		CodeWritingUtils.WriteContainingBlocks(
+			union.TypeInfo, codeWriter,
 			innerBlock =>
 			{
 				var jsonConverterTypeDefinition = new TypeDefinition
@@ -34,17 +34,17 @@ public sealed class JsonConverterGenerator
 					Kind = TypeKind.Class(false, true),
 					Name = "JsonConverter",
 					Accessibility = Accessibility.Public,
-					InheritedTypes = [$"global::System.Text.Json.Serialization.JsonConverter<{union.TypeSymbol}>"],
+					InheritedTypes = [TypeInfos.JsonConverter(new TypeName(union.TypeInfo, false))],
 					Fields =
 					[
 						new FieldDefinition
 						{
 							Name = UnionTypeFieldName,
-							TypeName = "global::System.Type",
+							TypeName = TypeNames.Type(),
 							Accessibility = Accessibility.Private,
 							IsStatic = true,
 							IsReadOnly = true,
-							Initializer = $"typeof({union.TypeSymbol})",
+							Initializer = $"typeof({union.TypeInfo.GetFullyQualifiedName(false)})",
 						},
 						..GetEncodedNameFields(union),
 					],
@@ -53,41 +53,41 @@ public sealed class JsonConverterGenerator
 						new MethodDefinition
 						{
 							Name = "Read",
-							ReturnType = union.TypeSymbol.ToDisplayString(NullableFlowState.MaybeNull),
+							ReturnType = new TypeName(union.TypeInfo, true),
 							Accessibility = Accessibility.Public,
 							MethodModifier = MethodModifier.Override(),
 							Parameters =
 							[
-								new MethodParameter("global::System.Text.Json.Utf8JsonReader", "reader", MethodParameterModifier.Ref()),
-								new MethodParameter("global::System.Type", "typeToConvert"),
-								new MethodParameter("global::System.Text.Json.JsonSerializerOptions", "options"),
+								new MethodParameter(TypeNames.Utf8JsonReader, "reader", MethodParameterModifier.Ref()),
+								new MethodParameter(TypeNames.Type(), "typeToConvert"),
+								new MethodParameter(TypeNames.JsonSerializerOptions(), "options"),
 							],
 							BodyWriter = GetReadMethodBodyWriter(),
 						},
 						new MethodDefinition
 						{
 							Name = "Write",
-							ReturnType = "void",
+							ReturnType = TypeNames.Void,
 							Accessibility = Accessibility.Public,
 							MethodModifier = MethodModifier.Override(),
 							Parameters =
 							[
-								new MethodParameter("global::System.Text.Json.Utf8JsonWriter", "writer"),
-								new MethodParameter(union.TypeSymbol.ToDisplayString(NullableFlowState.NotNull), "value"),
-								new MethodParameter("global::System.Text.Json.JsonSerializerOptions", "options"),
+								new MethodParameter(TypeNames.Utf8JsonWriter(), "writer"),
+								new MethodParameter(new TypeName(union.TypeInfo, false), "value"),
+								new MethodParameter(TypeNames.JsonSerializerOptions(), "options"),
 							],
 							BodyWriter = GetWriteMethodBodyWriter(union),
 						},
 						new MethodDefinition
 						{
 							Name = "Deserialize",
-							ReturnType = union.TypeSymbol.ToDisplayString(NullableFlowState.NotNull),
+							ReturnType = new TypeName(union.TypeInfo, false),
 							Accessibility = Accessibility.Private,
 							MethodModifier = MethodModifier.Static(),
 							Parameters =
 							[
-								new MethodParameter("global::System.Text.Json.Utf8JsonReader", "reader", MethodParameterModifier.Ref()),
-								new MethodParameter("global::System.Text.Json.JsonSerializerOptions", "options"),
+								new MethodParameter(TypeNames.Utf8JsonReader, "reader", MethodParameterModifier.Ref()),
+								new MethodParameter(TypeNames.JsonSerializerOptions(), "options"),
 							],
 							BodyWriter = GetDeserializeMethodBodyWriter(union),
 						},
@@ -96,10 +96,12 @@ public sealed class JsonConverterGenerator
 
 				var unionTypeDefinition = new TypeDefinition
 				{
-					Kind = union.TypeSymbol.IsValueType ? TypeKind.Struct(false) : TypeKind.Class(false, false),
-					Name = union.TypeSymbol.Name,
+					Kind = union.TypeInfo.Kind.Match(
+						_ => TypeKind.Class(false, false),
+						_ => TypeKind.Struct(false),
+						() => throw new ArgumentException("Unknown union type kind", nameof(union))),
+					Name = union.TypeInfo.Name,
 					IsPartial = true,
-					GenericParameters = union.TypeSymbol.TypeParameters.Select(x => x.Name).ToArray(),
 					NestedTypes = [jsonConverterTypeDefinition],
 				};
 
@@ -121,9 +123,9 @@ public sealed class JsonConverterGenerator
 			var readerName = def.Parameters[0].Name;
 			var optionsName = def.Parameters[2].Name;
 
-			methodBodyBlock.AppendLine($"global::Dusharp.Json.JsonConverterHelpers.BeforeRead(ref {readerName}, {UnionTypeFieldName});");
+			methodBodyBlock.AppendLine($"{TypeNames.JsonConverterHelpers.FullyQualifiedName}.BeforeRead(ref {readerName}, {UnionTypeFieldName});");
 			methodBodyBlock.AppendLine($"var value = Deserialize(ref {readerName}, {optionsName});");
-			methodBodyBlock.AppendLine($"global::Dusharp.Json.JsonConverterHelpers.AfterRead(ref {readerName}, {UnionTypeFieldName});");
+			methodBodyBlock.AppendLine($"{TypeNames.JsonConverterHelpers.FullyQualifiedName}.AfterRead(ref {readerName}, {UnionTypeFieldName});");
 			methodBodyBlock.AppendLine("return value;");
 		};
 
@@ -147,7 +149,7 @@ public sealed class JsonConverterGenerator
 					thenBlock.AppendLine($"{writerName}.WriteStartObject({GetUnionCaseEncodedValueFieldName(unionCase.Name)}.EncodedValue);");
 					foreach (var (unionCaseParameter, name) in unionCase.Parameters.Zip(parameterVariableNames, (x, y) => (x, y)))
 					{
-						thenBlock.AppendLine($"global::Dusharp.Json.JsonConverterHelpers.WriteProperty({writerName}, {GetUnionCaseParameterEncodedValueFieldName(unionCase.Name, unionCaseParameter.Name)}.EncodedValue, {name}, {optionsName});");
+						thenBlock.AppendLine($"{TypeNames.JsonConverterHelpers.FullyQualifiedName}.WriteProperty({writerName}, {GetUnionCaseParameterEncodedValueFieldName(unionCase.Name, unionCaseParameter.Name)}.EncodedValue, {name}, {optionsName});");
 					}
 
 					thenBlock.AppendLine($"{writerName}.WriteEndObject();");
@@ -161,7 +163,7 @@ public sealed class JsonConverterGenerator
 				thenBlock.AppendLine("return;");
 			}
 
-			methodBodyBlock.AppendLine($"global::Dusharp.Json.JsonConverterHelpers.WriteEmptyObject({writerName});");
+			methodBodyBlock.AppendLine($"{TypeNames.JsonConverterHelpers.FullyQualifiedName}.WriteEmptyObject({writerName});");
 		};
 
 	private static Action<MethodDefinition, CodeWriter> GetDeserializeMethodBodyWriter(UnionInfo union) =>
@@ -170,22 +172,22 @@ public sealed class JsonConverterGenerator
 			var readerName = def.Parameters[0].Name;
 			var optionsName = def.Parameters[1].Name;
 
-			methodBodyBlock.AppendLine($"if ({readerName}.TokenType == global::System.Text.Json.JsonTokenType.String)");
+			methodBodyBlock.AppendLine($"if ({readerName}.TokenType == {TypeNames.JsonTokenType.FullyQualifiedName}.String)");
 			using (var parameterlessUnionBlock = methodBodyBlock.NewBlock())
 			{
 				foreach (var parameterlessUnionCase in union.Cases.Where(x => !x.HasParameters))
 				{
 					parameterlessUnionBlock.AppendLine($"if ({readerName}.ValueTextEquals({GetUnionCaseEncodedValueFieldName(parameterlessUnionCase.Name)}.Utf8Value))");
 					using var thenBlock = parameterlessUnionBlock.NewBlock();
-					thenBlock.AppendLine($"return {union.TypeSymbol}.{parameterlessUnionCase.Name}();");
+					thenBlock.AppendLine($"return {union.TypeInfo.GetFullyQualifiedName(false)}.{parameterlessUnionCase.Name}();");
 				}
 
-				parameterlessUnionBlock.AppendLine($"global::Dusharp.Json.JsonConverterHelpers.ThrowInvalidParameterlessCaseName(ref {readerName}, {UnionTypeFieldName});");
+				parameterlessUnionBlock.AppendLine($"{TypeNames.JsonConverterHelpers.FullyQualifiedName}.ThrowInvalidParameterlessCaseName(ref {readerName}, {UnionTypeFieldName});");
 			}
 
 			methodBodyBlock
-				.Append($"if (!global::Dusharp.Json.JsonConverterHelpers.ReadAndTokenIsPropertyName(ref {readerName}))")
-				.AppendLine($" global::Dusharp.Json.JsonConverterHelpers.ThrowInvalidUnionJsonObject(ref {readerName});");
+				.Append($"if (!{TypeNames.JsonConverterHelpers.FullyQualifiedName}.ReadAndTokenIsPropertyName(ref {readerName}))")
+				.AppendLine($" {TypeNames.JsonConverterHelpers.FullyQualifiedName}.ThrowInvalidUnionJsonObject(ref {readerName});");
 
 			foreach (var withParametersUnionCase in union.Cases.Where(x => x.HasParameters))
 			{
@@ -199,10 +201,10 @@ public sealed class JsonConverterGenerator
 					.ToArray();
 				foreach (var (unionCaseParameter, name) in withParametersUnionCase.Parameters.Zip(parameterVariableNames, (x, y) => (x, y)))
 				{
-					deserializeCaseBlock.AppendLine($"{unionCaseParameter.Type.ToDisplayString(NullableFlowState.NotNull)} {name} = default!;");
+					deserializeCaseBlock.AppendLine($"{unionCaseParameter.TypeName.FullyQualifiedName} {name} = default!;");
 				}
 
-				deserializeCaseBlock.AppendLine($"while (global::Dusharp.Json.JsonConverterHelpers.ReadAndTokenIsPropertyName(ref {readerName}))");
+				deserializeCaseBlock.AppendLine($"while ({TypeNames.JsonConverterHelpers.FullyQualifiedName}.ReadAndTokenIsPropertyName(ref {readerName}))");
 				using (var deserializeCaseWhileBlock = deserializeCaseBlock.NewBlock())
 				{
 					foreach (var (unionCaseParameter, name) in withParametersUnionCase.Parameters.Zip(parameterVariableNames, (x, y) => (x, y)))
@@ -212,7 +214,7 @@ public sealed class JsonConverterGenerator
 						using var readCasePropertyBlock = deserializeCaseWhileBlock.NewBlock();
 						readCasePropertyBlock
 							.AppendLine(
-								$"{name} = global::Dusharp.Json.JsonConverterHelpers.Deserialize<{unionCaseParameter.Type.ToDisplayString(NullableFlowState.NotNull)}>(ref {readerName}, {optionsName})!;")
+								$"{name} = {TypeNames.JsonConverterHelpers.FullyQualifiedName}.Deserialize<{unionCaseParameter.TypeName.FullyQualifiedName}>(ref {readerName}, {optionsName})!;")
 							.AppendLine("loaded++;")
 							.AppendLine("continue;");
 					}
@@ -220,29 +222,29 @@ public sealed class JsonConverterGenerator
 
 				deserializeCaseBlock
 					.Append($"if (loaded < {withParametersUnionCase.Parameters.Count})")
-					.AppendLine($""" global::Dusharp.Json.JsonConverterHelpers.ThrowNotAllCaseParametersPresent({UnionTypeFieldName}, "{withParametersUnionCase.Name}", loaded, {withParametersUnionCase.Parameters.Count});""")
-					.AppendLine($"return {union.TypeSymbol}.{withParametersUnionCase.Name}({string.Join(", ", parameterVariableNames)});");
+					.AppendLine($""" {TypeNames.JsonConverterHelpers.FullyQualifiedName}.ThrowNotAllCaseParametersPresent({UnionTypeFieldName}, "{withParametersUnionCase.Name}", loaded, {withParametersUnionCase.Parameters.Count});""")
+					.AppendLine($"return {union.TypeInfo.GetFullyQualifiedName(false)}.{withParametersUnionCase.Name}({string.Join(", ", parameterVariableNames)});");
 			}
 
 			methodBodyBlock
-				.AppendLine($"global::Dusharp.Json.JsonConverterHelpers.ThrowInvalidCaseName(ref {readerName}, {UnionTypeFieldName});")
+				.AppendLine($"{TypeNames.JsonConverterHelpers.FullyQualifiedName}.ThrowInvalidCaseName(ref {readerName}, {UnionTypeFieldName});")
 				.AppendLine("return default!;");
 		};
 
 	private static FieldDefinition GetEncodedValueField(string fieldName, string value)
 	{
 		var utf8Value = Encoding.UTF8.GetBytes(value);
-		var utf8NewArrayString = $"new byte[{utf8Value.Length}] {{ {string.Join(", ", utf8Value)} }}";
+		var utf8NewArrayString = $"new {TypeNames.Byte.FullyQualifiedName}[{utf8Value.Length}] {{ {string.Join(", ", utf8Value)} }}";
 
 		return new FieldDefinition
 		{
 			Name = fieldName,
-			TypeName = "global::Dusharp.Json.JsonEncodedValue",
+			TypeName = TypeNames.JsonEncodedValue,
 			Accessibility = Accessibility.Private,
 			IsStatic = true,
 			IsReadOnly = true,
 			Initializer =
-				$"new global::Dusharp.Json.JsonEncodedValue(global::System.Text.Json.JsonEncodedText.Encode({utf8NewArrayString}), {utf8NewArrayString})",
+				$"new {TypeNames.JsonEncodedValue.FullyQualifiedName}({TypeNames.JsonEncodedText.FullyQualifiedName}.Encode({utf8NewArrayString}), {utf8NewArrayString})",
 		};
 	}
 

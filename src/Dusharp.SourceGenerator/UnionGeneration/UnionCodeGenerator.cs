@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
-using Dusharp.Extensions;
 using Dusharp.SourceGenerator.Common;
 using Microsoft.CodeAnalysis;
+using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
+using TypeName = Dusharp.CodeAnalyzing.TypeName;
 
 namespace Dusharp.UnionGeneration;
 
@@ -28,8 +29,8 @@ public sealed class UnionCodeGenerator
 	{
 		using var codeWriter = CodeWriter.CreateWithDefaultLines();
 
-		CodeWritingUtils.WriteOuterBlocks(
-			unionInfo.TypeSymbol, codeWriter,
+		CodeWritingUtils.WriteContainingBlocks(
+			unionInfo.TypeInfo, codeWriter,
 			innerBlock =>
 			{
 				innerBlock.WriteSuppressWarning("CA1000", "For generic unions.");
@@ -51,28 +52,27 @@ public sealed class UnionCodeGenerator
 	{
 		private readonly IUnionDefinitionGenerator _unionDefinitionGenerator;
 		private readonly UnionInfo _union;
-		private readonly TypeName _unionTypeName;
-		private readonly string _nullableUnionTypeName;
+		private readonly TypeName _nullableUnionTypeName;
 
 		public UnionTypeDefinitionGenerator(IUnionDefinitionGenerator unionDefinitionGenerator, UnionInfo union)
 		{
 			_unionDefinitionGenerator = unionDefinitionGenerator;
 			_union = union;
-			_unionTypeName = union.GetTypeName();
-			_nullableUnionTypeName = _union.TypeSymbol.IsValueType
-				? _unionTypeName.FullName
-				: $"{_unionTypeName.FullName}?";
+			_nullableUnionTypeName = new TypeName(_union.TypeInfo, true);
 		}
 
 		public TypeDefinition Generate()
 		{
 			var unionTypeDefinition = new TypeDefinition
 			{
-				Name = _union.Name,
+				Name = _union.TypeInfo.Name,
 				Kind = _unionDefinitionGenerator.TypeKind,
 				IsPartial = true,
-				GenericParameters = _union.TypeSymbol.TypeParameters.Select(x => x.Name).ToArray(),
-				InheritedTypes = [$"System.IEquatable<{_unionTypeName.FullName}>", "global::Dusharp.IUnion"],
+				InheritedTypes =
+				[
+					TypeInfos.IEquatable(new TypeName(_union.TypeInfo, false)),
+					TypeInfos.IUnion,
+				],
 				Properties = _union.Cases.Select(GetIsCaseProperty).ToArray(),
 				Methods = _union.Cases
 					.Select(GetUnionCaseMethod)
@@ -97,7 +97,7 @@ public sealed class UnionCodeGenerator
 			{
 				Name = UnionNamesProvider.GetIsCasePropertyName(unionCase.Name),
 				Accessibility = Accessibility.Public,
-				TypeName = "bool",
+				TypeName = TypeNames.Boolean,
 				Getter = new PropertyDefinition.PropertyAccessor(
 					null,
 					PropertyDefinition.PropertyAccessorImpl.Bodied((_, bodyBlock) =>
@@ -108,7 +108,7 @@ public sealed class UnionCodeGenerator
 			new()
 			{
 				Name = unionCase.Name,
-				ReturnType = _unionTypeName.FullName,
+				ReturnType = new TypeName(_union.TypeInfo, false),
 				Accessibility = Accessibility.Public,
 				MethodModifier = MethodModifier.Static(),
 				IsPartial = true,
@@ -120,7 +120,7 @@ public sealed class UnionCodeGenerator
 		{
 			var matchDelegateParameters = _union.Cases
 				.Select(x => new MethodParameter(
-					methodConfiguration.MatchCaseDelegateTypeProvider(string.Join(", ", x.Parameters.Select(y => y.TypeName))),
+					methodConfiguration.MatchCaseDelegateTypeProvider(x.Parameters.Select(y => y.TypeName).ToArray()),
 					$"{char.ToLowerInvariant(x.Name[0])}{x.Name.AsSpan(1).ToString()}Case"))
 				.ToArray();
 
@@ -150,7 +150,7 @@ public sealed class UnionCodeGenerator
 					}
 
 					methodBlock.AppendLine(UnionGenerationUtils.ThrowUnionInInvalidStateCode);
-					if (methodConfiguration.ReturnType != "void")
+					if (methodConfiguration.ReturnType != TypeNames.Void)
 					{
 						methodBlock.AppendLine("return default!;");
 					}
@@ -162,7 +162,7 @@ public sealed class UnionCodeGenerator
 			new()
 			{
 				Name = UnionNamesProvider.GetTryGetCaseDataMethodName(unionCase.Name),
-				ReturnType = "bool",
+				ReturnType = TypeNames.Boolean,
 				Accessibility = Accessibility.Public,
 				Parameters = unionCase.Parameters
 					.Select(x => new MethodParameter(x.TypeName, x.Name, MethodParameterModifier.Out()))
@@ -196,34 +196,34 @@ public sealed class UnionCodeGenerator
 			{
 				Name = "Equals",
 				Accessibility = Accessibility.Public,
-				ReturnType = "bool",
+				ReturnType = TypeNames.Boolean,
 				Parameters = [new MethodParameter(_nullableUnionTypeName, "other")],
 			}),
 			_unionDefinitionGenerator.AdjustDefaultEqualsMethod(new MethodDefinition
 			{
 				Name = "Equals",
 				Accessibility = Accessibility.Public,
-				ReturnType = "bool",
-				Parameters = [new MethodParameter("object?", "other")],
+				ReturnType = TypeNames.Boolean,
+				Parameters = [new MethodParameter(TypeNames.Object(true), "other")],
 				MethodModifier = MethodModifier.Override(),
 			}),
 			new MethodDefinition
 			{
 				Name = "GetHashCode",
 				Accessibility = Accessibility.Public,
-				ReturnType = "int",
+				ReturnType = TypeNames.Int32,
 				MethodModifier = MethodModifier.Override(),
 				BodyWriter = _unionDefinitionGenerator.GetGetHashCodeMethodBodyWriter(),
 			},
 		];
 
 		private static OperatorDefinition[] GetEqualityOperators(
-			string nullableUnionTypeName, IUnionDefinitionGenerator unionDefinitionGenerator) =>
+			TypeName nullableUnionTypeName, IUnionDefinitionGenerator unionDefinitionGenerator) =>
 		[
 			new OperatorDefinition
 			{
 				Name = "==",
-				ReturnType = "bool",
+				ReturnType = TypeNames.Boolean,
 				Parameters =
 				[
 					new MethodParameter(nullableUnionTypeName, "left"),
@@ -234,7 +234,7 @@ public sealed class UnionCodeGenerator
 			new OperatorDefinition
 			{
 				Name = "!=",
-				ReturnType = "bool",
+				ReturnType = TypeNames.Boolean,
 				Parameters =
 				[
 					new MethodParameter(nullableUnionTypeName, "left"),
@@ -247,67 +247,65 @@ public sealed class UnionCodeGenerator
 
 	private sealed class MatchMethodConfiguration
 	{
+		private static readonly TypeName TStateName =
+			new(TypeInfo.SpecialName("TState", TypeInfo.TypeKind.Unknown()), false);
+
+		private static readonly TypeName TRetName =
+			new(TypeInfo.SpecialName("TRet", TypeInfo.TypeKind.Unknown()), false);
+
 		public static readonly MatchMethodConfiguration WithoutStateWithoutReturn = new(
-			"void",
-			caseTypeParameters => string.IsNullOrEmpty(caseTypeParameters)
-				? "System.Action"
-				: $"System.Action<{caseTypeParameters}>",
+			TypeNames.Void,
+			caseTypeParameters => new TypeName(TypeInfos.Action(caseTypeParameters), false),
 			(matchHandlerParameterName, caseParameters) => $"{matchHandlerParameterName}({caseParameters}); return;");
 
 		public static readonly MatchMethodConfiguration WithoutStateWithReturn = new(
-			"TRet",
-			caseTypeParameters => string.IsNullOrEmpty(caseTypeParameters)
-				? "System.Func<TRet>"
-				: $"System.Func<{caseTypeParameters}, TRet>",
+			TRetName,
+			caseTypeParameters => new TypeName(TypeInfos.Func(caseTypeParameters, TRetName), false),
 			(matchHandlerParameterName, caseParameters) => $"return {matchHandlerParameterName}({caseParameters});")
 		{
-			GenericParameters = ["TRet"],
+			GenericParameters = [TRetName.Name],
 		};
 
 		public static readonly MatchMethodConfiguration WithStateWithoutReturn = new(
-			"void",
-			caseTypeParameters => string.IsNullOrEmpty(caseTypeParameters)
-				? "System.Action<TState>"
-				: $"System.Action<TState, {caseTypeParameters}>",
+			TypeNames.Void,
+			caseTypeParameters => new TypeName(TypeInfos.Action([TStateName, ..caseTypeParameters]), false),
 			(matchHandlerParameterName, caseParameters) =>
 			{
 				caseParameters = string.IsNullOrEmpty(caseParameters) ? string.Empty : $", {caseParameters}";
 				return $"{matchHandlerParameterName}(state{caseParameters}); return;";
 			})
 		{
-			GenericParameters = ["TState"],
+			GenericParameters = [TStateName.Name],
 			MethodParametersExtender =
-				methodParameters => methodParameters.Prepend(new MethodParameter("TState", "state")),
+				methodParameters => methodParameters.Prepend(new MethodParameter(TStateName, "state")),
 		};
 
 		public static readonly MatchMethodConfiguration WithStateWithReturn = new(
-			"TRet",
-			caseTypeParameters => string.IsNullOrEmpty(caseTypeParameters)
-				? "System.Func<TState, TRet>"
-				: $"System.Func<TState, {caseTypeParameters}, TRet>",
+			TRetName,
+			caseTypeParameters => new TypeName(TypeInfos.Func([TStateName, ..caseTypeParameters], TRetName), false),
 			(matchHandlerParameterName, caseParameters) =>
 			{
 				caseParameters = string.IsNullOrEmpty(caseParameters) ? string.Empty : $", {caseParameters}";
 				return $"return {matchHandlerParameterName}(state{caseParameters});";
 			})
 		{
-			GenericParameters = ["TState", "TRet"],
+			GenericParameters = [TStateName.Name, TRetName.Name],
 			MethodParametersExtender =
-				methodParameters => methodParameters.Prepend(new MethodParameter("TState", "state")),
+				methodParameters => methodParameters.Prepend(new MethodParameter(TStateName, "state")),
 		};
 
-		public string ReturnType { get; }
+		public TypeName ReturnType { get; }
 
 		public IReadOnlyList<string> GenericParameters { get; init; } = [];
 
-		public Func<string, string> MatchCaseDelegateTypeProvider { get; }
+		public Func<IReadOnlyCollection<TypeName>, TypeName> MatchCaseDelegateTypeProvider { get; }
 
 		public Func<string, string, string> MatchBodyProvider { get; }
 
 		public Func<IEnumerable<MethodParameter>, IEnumerable<MethodParameter>> MethodParametersExtender { get; private init; } =
 			x => x;
 
-		public MatchMethodConfiguration(string returnType, Func<string, string> matchCaseDelegateTypeProvider,
+		public MatchMethodConfiguration(TypeName returnType, Func<IReadOnlyCollection<TypeName>, TypeName> matchCaseDelegateTypeProvider,
 			Func<string, string, string> matchBodyProvider)
 		{
 			ReturnType = returnType;

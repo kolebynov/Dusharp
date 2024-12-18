@@ -1,5 +1,5 @@
 using System;
-using Microsoft.CodeAnalysis;
+using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
 
 namespace Dusharp;
 
@@ -10,33 +10,32 @@ public static class CodeWritingUtils
 	{
 		codeWriter.AppendLine(
 			useAttribute
-				? $"[System.Diagnostics.CodeAnalysis.SuppressMessage(\"\", \"{checkId}\", Justification = \"{justification}\")]"
+				? $"[global::System.Diagnostics.CodeAnalysis.SuppressMessage(\"\", \"{checkId}\", Justification = \"{justification}\")]"
 				: $"#pragma warning disable {checkId} // {justification}");
 	}
 
-	public static void WriteOuterBlocks(INamedTypeSymbol typeSymbol, CodeWriter codeWriter,
+	public static void WriteContainingBlocks(TypeInfo typeInfo, CodeWriter codeWriter,
 		Action<CodeWriter> innerBlockWriter)
 	{
-		if (typeSymbol.ContainingType != null)
+		if (typeInfo.ContainingType is { } containingType)
 		{
-			WriteOuterBlocks(typeSymbol.ContainingType, codeWriter,
+			WriteContainingBlocks(containingType, codeWriter,
 				writer =>
 				{
-					var containingType = typeSymbol.ContainingType;
-					writer.AppendLine($"partial {containingType.TypeKind.ToCodeString()} {containingType.Name}");
+					writer.AppendLine($"partial {containingType.Kind.ToCodeString()} {containingType.Name}");
 					using var typeBodyBlock = writer.NewBlock();
 					innerBlockWriter(typeBodyBlock);
 				});
 			return;
 		}
 
-		if (typeSymbol.ContainingNamespace?.IsGlobalNamespace ?? true)
+		if (string.IsNullOrEmpty(typeInfo.Namespace))
 		{
 			innerBlockWriter(codeWriter);
 		}
 		else
 		{
-			codeWriter.AppendLine($"namespace {typeSymbol.ContainingNamespace}");
+			codeWriter.AppendLine($"namespace {typeInfo.Namespace}");
 			using var namespaceBlock = codeWriter.NewBlock();
 			innerBlockWriter(namespaceBlock);
 		}

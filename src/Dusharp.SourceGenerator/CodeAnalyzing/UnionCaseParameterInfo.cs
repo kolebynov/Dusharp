@@ -1,19 +1,17 @@
-using Microsoft.CodeAnalysis;
-
 namespace Dusharp.CodeAnalyzing;
 
 public readonly struct UnionCaseParameterInfo
 {
 	public string Name { get; }
 
-	public ITypeSymbol Type { get; }
+	public TypeName TypeName { get; }
 
-	public string TypeName { get; }
+	public bool ContainsGenericParameters { get; }
 
-	public UnionCaseParameterInfo(string name, ITypeSymbol type)
+	public UnionCaseParameterInfo(string name, TypeName typeName, bool containsGenericParameters)
 	{
 		Name = name;
-		Type = type;
-		TypeName = type.ToString();
+		TypeName = typeName;
+		ContainsGenericParameters = containsGenericParameters;
 	}
 }

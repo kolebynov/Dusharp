@@ -71,8 +71,10 @@ public sealed class TypeCodeWriter
 			static (declarationBuilder, _) => declarationBuilder.Add("struct"));
 
 		declarationBuilder
-			.Add(typeDefinition.FullName)
-			.AddIf(typeDefinition.InheritedTypes.Count > 0, () => $": {string.Join(", ", typeDefinition.InheritedTypes)}");
+			.Add(typeDefinition.Name)
+			.AddIf(
+				typeDefinition.InheritedTypes.Count > 0,
+				() => $": {string.Join(", ", typeDefinition.InheritedTypes.Select(x => x.GetFullyQualifiedName(false)))}");
 
 		codeWriter.AppendLine(declarationBuilder.ToString());
 	}
@@ -88,7 +90,7 @@ public sealed class TypeCodeWriter
 			.AddIf(fieldDefinition.Accessibility != null, () => fieldDefinition.Accessibility!.Value.ToCodeString())
 			.AddIf(fieldDefinition.IsStatic, () => "static")
 			.AddIf(fieldDefinition.IsReadOnly, () => "readonly")
-			.Add(fieldDefinition.TypeName)
+			.Add(fieldDefinition.TypeName.FullyQualifiedName)
 			.Add(fieldDefinition.Name)
 			.AddIf(fieldDefinition.Initializer != null, () => "=", () => fieldDefinition.Initializer!);
 		typeBodyBlock.AppendLine($"{declarationBuilder};");
@@ -104,7 +106,7 @@ public sealed class TypeCodeWriter
 		var declarationBuilder = new DeclarationBuilder()
 			.AddIf(propertyDefinition.Accessibility != null, () => propertyDefinition.Accessibility!.Value.ToCodeString())
 			.AddIf(propertyDefinition.IsStatic, () => "static")
-			.Add(propertyDefinition.TypeName)
+			.Add(propertyDefinition.TypeName.FullyQualifiedName)
 			.Add(propertyDefinition.Name);
 		typeBodyBlock.AppendLine(declarationBuilder.ToString());
 		using (var propertyBodyBlock = typeBodyBlock.NewBlock())
@@ -161,7 +163,7 @@ public sealed class TypeCodeWriter
 		var declarationStr = new DeclarationBuilder()
 			.AddIf(constructorDefinition.Accessibility != null, () => constructorDefinition.Accessibility!.Value.ToCodeString())
 			.AddIf(constructorDefinition.IsStatic, () => "static")
-			.Add(typeDefinition.Name)
+			.Add(typeDefinition.NameWithoutGenerics)
 			.ToString();
 
 		typeBodyBlock.AppendLine($"{declarationStr}({ToParametersString(constructorDefinition.Parameters)})");
@@ -187,7 +189,7 @@ public sealed class TypeCodeWriter
 				methodDefinition.MethodModifier != null,
 				() => methodDefinition.MethodModifier!.Match(() => "static", () => "abstract", () => "virtual", () => "override"))
 			.AddIf(methodDefinition.IsPartial, () => "partial")
-			.Add(methodDefinition.ReturnType)
+			.Add(methodDefinition.ReturnType.FullyQualifiedName)
 			.Add(methodDefinition.Name)
 			.ToString();
 
