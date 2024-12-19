@@ -12,7 +12,7 @@
 - ✅ **Generics**: Generics support for union types.
 - ✅ **Pretty print**: Using overloaded `ToString()`.
 - ✅ **Struct unions**: With efficient memory layout for unions as structs.
-- ❌ **JSON serialization/deserialization**: Support for unions with `System.Text.Json` (coming soon).
+- ✅ **JSON serialization/deserialization**: Support for unions with `System.Text.Json`.
 
 ## Installation
 
@@ -27,12 +27,14 @@ dotnet add package Dusharp
 `Dusharp` uses attributes to generate discriminated unions and case methods. Here's how to get started:
 
 ### 1. Define a Union
-To define a union, annotate a class with the `[Dusharp.UnionAttribute]` attribute.
+To define a union, annotate a class with the `[Dusharp.UnionAttribute]` attribute.  `[Dusharp.Json.GenerateJsonConverterAttribute]` generates JSON converter for the union (will explain below).
 
 ```csharp
 using Dusharp;
+using Dusharp.Json;
 
 [Union]
+[GenerateJsonConverter]
 public partial class Shape<T>
     where T : struct, INumber<T>
 {
@@ -44,11 +46,16 @@ Define union cases by creating public static partial methods and marking them wi
 
 ```csharp
 using Dusharp;
+using Dusharp.Json;
 
 [Union]
+[GenerateJsonConverter]
 public partial class Shape<T>
     where T : struct, INumber<T>
 {
+    [UnionCase]
+    public static partial Shape<T> Point();
+
     [UnionCase]
     public static partial Shape<T> Circle(T radius);
 
@@ -64,6 +71,7 @@ You can easily perform pattern matching on a union using the `Match` method. The
 Shape<double> shape = Shape<double>.Circle(5.0);
 
 string result = shape.Match(
+    () => "Point",
     radius => $"Circle with radius {radius}",
     (width, height) => $"Rectangle with width {width} and height {height}");
 
@@ -172,8 +180,46 @@ Thus, the total size is `16 + 32 + 8 = 56 bytes`.
 #### Important Note
 All of these details about memory layout and struct size are implementation-specific and subject to change. Users should not rely on these internal details or use them directly in their code. The behavior and memory management may evolve in future versions to improve performance or efficiency.
 
+## Unions serialization/deserialization
+`Dusharp` supports serialization and deserialization of unions using either a default union JSON converter or a source-generated JSON converter specific to the union type.
+
+To generate a specific JSON converter, the union type must be marked with the `[Dusharp.Json.GenerateJsonConverterAttribute]` attribute.
+- **Parameterless Union Cases:** Serialized as a string containing only the case name.
+- **Union Cases with Parameters:** Serialized as an object where the case name is the key, followed by an object containing the case parameters.
+- **Limitations with NativeAOT:** The `DefaultUnionJsonConverter` cannot be used with NativeAOT because it relies on expression trees.
+- **NativeAOT Support:** For NativeAOT scenarios, use source-generated JSON converters tailored to specific union types.
+
+```csharp
+using System.Text.Json;
+
+Shape<double> shape1 = Shape<double>.Point();
+Shape<double> shape2 = Shape<double>.Circle(5.0);
+Shape<double> shape3 = Shape<double>.Rectangle(2.0, 2.0);
+
+JsonSerializerOptions options = new JsonSerializerOptions
+{
+    Converters =
+    {
+        // Default generic JSON converter can convert any union type.
+        new DefaultUnionJsonConverter(),
+        // Or
+        // Specific source-generated JSON converter for the Shape<double> union.
+        new Shape<double>.JsonConverter(),
+    },
+};
+
+string serializedShape3 = JsonSerializer.Serialize(shape3, options);
+
+Console.WriteLine(JsonSerializer.Serialize(shape1, options)); // "Point"
+Console.WriteLine(JsonSerializer.Serialize(shape2, options)); // {"Circle":{"radius": 5.0}}
+Console.WriteLine(serializedShape3); // {"Rectangle":{"width": 2.0,"height": 2.0}}
+
+Shape<double> deserializedShape = JsonSerializer.Deserialize<Shape<double>>(serializedShape3, options);
+Console.WriteLine(deserializedShape.IsRectangle); // True
+```
+
 ## Upcoming Features
-- **JSON serialization/deserialization**: Support for JSON (de)serialization via System.Text.Json.
+- Unsafe features support (type pointers, method pointers).
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
