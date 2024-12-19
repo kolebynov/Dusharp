@@ -25,7 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Dusharp\Dusharp.csproj" />
+		<ProjectReference Include="..\..\src\Dusharp.Common\Dusharp.Common.csproj" />
 		<ProjectReference Include="..\..\src\Dusharp.SourceGenerator\Dusharp.SourceGenerator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer"/>
 		<ProjectReference Include="..\..\src\Dusharp.SourceGenerator.Common\Dusharp.SourceGenerator.Common.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer"/>
 	</ItemGroup>

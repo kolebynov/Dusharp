@@ -22,7 +22,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.Tests", "tests\Dush
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.Package", "src\Dusharp.Package\Dusharp.Package.csproj", "{2F5E41FC-BDC8-4853-A9CF-173C68DA3FF6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp", "src\Dusharp\Dusharp.csproj", "{E944ED86-1555-43FA-84E9-358966E70202}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.Common", "src\Dusharp.Common\Dusharp.Common.csproj", "{E944ED86-1555-43FA-84E9-358966E70202}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.SourceGenerator.Common", "src\Dusharp.SourceGenerator.Common\Dusharp.SourceGenerator.Common.csproj", "{804324AF-86DB-49CE-8B1B-A9CF24316C54}"
 EndProject
