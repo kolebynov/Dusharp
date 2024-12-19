@@ -74,7 +74,7 @@ public sealed class TypeCodeWriter
 			.Add(typeDefinition.Name)
 			.AddIf(
 				typeDefinition.InheritedTypes.Count > 0,
-				() => $": {string.Join(", ", typeDefinition.InheritedTypes.Select(x => x.GetFullyQualifiedName(false)))}");
+				() => $": {string.Join(", ", typeDefinition.InheritedTypes)}");
 
 		codeWriter.AppendLine(declarationBuilder.ToString());
 	}

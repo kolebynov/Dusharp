@@ -25,21 +25,21 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 	{
 		var caseNestedTypeInfo = _unionCaseNestedTypes[unionCase].TypeInfo;
 		return (def, methodBlock) => methodBlock.AppendLine(unionCase.HasParameters
-			? $"return new {caseNestedTypeInfo.GetFullyQualifiedName(false)}({string.Join(", ", def.Parameters.Select(x => x.Name))});"
-			: $"return {caseNestedTypeInfo.GetFullyQualifiedName(false)}.Instance;");
+			? $"return new {caseNestedTypeInfo}({string.Join(", ", def.Parameters.Select(x => x.Name))});"
+			: $"return {caseNestedTypeInfo}.Instance;");
 	}
 
 	public string GetUnionCaseCheckExpression(UnionCaseInfo unionCase)
 	{
 		var caseNestedTypeInfo = _unionCaseNestedTypes[unionCase].TypeInfo;
-		return $"this is {caseNestedTypeInfo.GetFullyQualifiedName(false)}";
+		return $"this is {caseNestedTypeInfo}";
 	}
 
 	public IEnumerable<string> GetUnionCaseParameterAccessors(UnionCaseInfo unionCase)
 	{
 		var caseNestedTypeInfo = _unionCaseNestedTypes[unionCase].TypeInfo;
 		return unionCase.Parameters
-			.Select(x => $"{TypeInfos.Unsafe}.As<{caseNestedTypeInfo.GetFullyQualifiedName(false)}>(this).{x.Name}");
+			.Select(x => $"{TypeInfos.Unsafe}.As<{caseNestedTypeInfo}>(this).{x.Name}");
 	}
 
 	public MethodDefinition AdjustDefaultEqualsMethod(MethodDefinition equalsMethod) =>
@@ -109,7 +109,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 				IsReadOnly = true,
 				TypeName = new TypeName(caseTypeInfo, false),
 				Name = "Instance",
-				Initializer = $"new {caseTypeInfo.GetFullyQualifiedName(false)}()",
+				Initializer = $"new {caseTypeInfo}()",
 			})
 			: fields;
 
@@ -210,7 +210,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		static void WriteEqualsMethodBody(TypeInfo caseTypeInfo, CodeWriter methodBodyBlock)
 		{
 			methodBodyBlock.AppendLine($"if ({TypeInfos.Object}.ReferenceEquals(this, other)) return true;");
-			methodBodyBlock.AppendLine($"var otherCasted = other as {caseTypeInfo.GetFullyQualifiedName(false)};");
+			methodBodyBlock.AppendLine($"var otherCasted = other as {caseTypeInfo};");
 			methodBodyBlock.AppendLine($"if ({TypeInfos.Object}.ReferenceEquals(otherCasted, null)) return false;");
 			methodBodyBlock.AppendLine($"return {structuralEqualsMethod}(otherCasted);");
 		}

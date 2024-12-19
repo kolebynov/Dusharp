@@ -44,7 +44,7 @@ public sealed class JsonConverterGenerator
 							Accessibility = Accessibility.Private,
 							IsStatic = true,
 							IsReadOnly = true,
-							Initializer = $"typeof({union.TypeInfo.GetFullyQualifiedName(false)})",
+							Initializer = $"typeof({union.TypeInfo})",
 						},
 						..GetEncodedNameFields(union),
 					],
@@ -179,7 +179,7 @@ public sealed class JsonConverterGenerator
 				{
 					parameterlessUnionBlock.AppendLine($"if ({readerName}.ValueTextEquals({GetUnionCaseEncodedValueFieldName(parameterlessUnionCase.Name)}.Utf8Value))");
 					using var thenBlock = parameterlessUnionBlock.NewBlock();
-					thenBlock.AppendLine($"return {union.TypeInfo.GetFullyQualifiedName(false)}.{parameterlessUnionCase.Name}();");
+					thenBlock.AppendLine($"return {union.TypeInfo}.{parameterlessUnionCase.Name}();");
 				}
 
 				parameterlessUnionBlock.AppendLine($"{TypeInfos.JsonConverterHelpers}.ThrowInvalidParameterlessCaseName(ref {readerName}, {UnionTypeFieldName});");
@@ -223,7 +223,7 @@ public sealed class JsonConverterGenerator
 				deserializeCaseBlock
 					.Append($"if (loaded < {withParametersUnionCase.Parameters.Count})")
 					.AppendLine($""" {TypeInfos.JsonConverterHelpers}.ThrowNotAllCaseParametersPresent({UnionTypeFieldName}, "{withParametersUnionCase.Name}", loaded, {withParametersUnionCase.Parameters.Count});""")
-					.AppendLine($"return {union.TypeInfo.GetFullyQualifiedName(false)}.{withParametersUnionCase.Name}({string.Join(", ", parameterVariableNames)});");
+					.AppendLine($"return {union.TypeInfo}.{withParametersUnionCase.Name}({string.Join(", ", parameterVariableNames)});");
 			}
 
 			methodBodyBlock

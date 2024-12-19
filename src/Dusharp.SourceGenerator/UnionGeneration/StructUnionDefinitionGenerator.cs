@@ -82,9 +82,9 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 				.Append("return ")
 				.Append(def.Parameters[0].Name)
 				.Append(" is ")
-				.Append(_union.TypeInfo.GetFullyQualifiedName(false))
+				.Append(_union.TypeInfo)
 				.Append(" && Equals((")
-				.Append(_union.TypeInfo.GetFullyQualifiedName(false))
+				.Append(_union.TypeInfo)
 				.Append(")")
 				.Append(def.Parameters[0].Name)
 				.AppendLine(");"),

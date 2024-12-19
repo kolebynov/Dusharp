@@ -26,6 +26,8 @@ public sealed class CodeWriter : IDisposable
 
 	public CodeWriter Append(string line) => Append(_depthStr, line, false);
 
+	public CodeWriter Append<T>(T value) => Append(value!.ToString());
+
 	public CodeWriter AppendLineWithoutTab(string line) => Append(string.Empty, line, true);
 
 	public CodeWriter NewBlock(bool writeSemicolonOnClose = false)
