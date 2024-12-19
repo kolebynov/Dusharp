@@ -25,7 +25,6 @@ public static class TypeInfos
 	public static readonly TypeInfo Byte = TypeInfo.SpecificType(SystemNs, null, "Byte", TypeInfo.TypeKind.ValueType(true));
 	public static readonly TypeInfo Type = TypeInfo.SpecificType(SystemNs, null, "Type", TypeInfo.TypeKind.ReferenceType(false));
 	public static readonly TypeInfo Unsafe = TypeInfo.SpecificType(CompilerServicesNs, null, "Unsafe", TypeInfo.TypeKind.ReferenceType(false));
-	public static readonly TypeInfo EqualityComparer = TypeInfo.SpecificType(CollectionsGenericNs, null, "EqualityComparer", TypeInfo.TypeKind.ReferenceType(false));
 
 	public static readonly TypeInfo Utf8JsonReader = TypeInfo.SpecificType(JsonNs, null, "Utf8JsonReader", TypeInfo.TypeKind.ValueType(false));
 	public static readonly TypeInfo Utf8JsonWriter = TypeInfo.SpecificType(JsonNs, null, "Utf8JsonWriter", TypeInfo.TypeKind.ReferenceType(false));
@@ -56,4 +55,7 @@ public static class TypeInfos
 	public static TypeInfo JsonConverter(TypeName arg) =>
 		TypeInfo.SpecificType(JsonSerializationNs, null, $"JsonConverter<{arg.FullyQualifiedName}>",
 			TypeInfo.TypeKind.ReferenceType(false));
+
+	public static TypeInfo EqualityComparer(TypeName arg) =>
+		TypeInfo.SpecificType(CollectionsGenericNs, null, $"EqualityComparer<{arg.FullyQualifiedName}>", TypeInfo.TypeKind.ReferenceType(false));
 }

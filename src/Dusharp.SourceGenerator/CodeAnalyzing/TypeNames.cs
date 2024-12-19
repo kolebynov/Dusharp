@@ -12,7 +12,6 @@ public static class TypeNames
 	public static readonly TypeName JsonTokenType = new(TypeInfos.JsonTokenType, false);
 
 	public static readonly TypeName JsonEncodedValue = new(TypeInfos.JsonEncodedValue, false);
-	public static readonly TypeName JsonConverterHelpers = new(TypeInfos.JsonConverterHelpers, false);
 
 	public static TypeName Object(bool isRefNullable = false) => new(TypeInfos.Object, isRefNullable);
 

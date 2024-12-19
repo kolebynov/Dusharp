@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using Dusharp.Json;
 using FluentAssertions;
@@ -23,15 +24,19 @@ namespace Dusharp.Tests.Json
 		};
 
 		[Fact]
-		public void Write_ForDefaultValue_WriteEmptyObject()
+		public void Write_ForDefaultStructValue_ThrowException()
 		{
-			// Act
+			// Arrange
 
-			var resultJson = JsonSerializer.Serialize(default(TestStructUnion<int>), _defaultConverterSerializerOptions);
+			var errorMessage =
+				$"Failed to serialize union {typeof(TestStructUnion<int>).Name}. It's in invalid state (probably a struct default value). (Parameter 'value')";
 
-			// Assert
+			// Act and Assert
 
-			resultJson.Should().Be("{}");
+			FluentActions.Invoking(() => JsonSerializer.Serialize(default(TestStructUnion<int>), _defaultConverterSerializerOptions))
+				.Should().Throw<ArgumentException>().WithMessage(errorMessage);
+			FluentActions.Invoking(() => JsonSerializer.Serialize(default(TestStructUnion<int>), _structConverterSerializerOptions))
+				.Should().Throw<ArgumentException>().WithMessage(errorMessage);
 		}
 
 		[Fact]

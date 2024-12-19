@@ -20,7 +20,7 @@ public static class UnionGenerationUtils
 	{
 		var conditions = parameters
 			.Select(x =>
-				$"{TypeInfos.EqualityComparer}<{x.Type.FullyQualifiedName}>.Default.Equals({x.Left}, {x.Right})");
+				$"{TypeInfos.EqualityComparer(x.Type)}.Default.Equals({x.Left}, {x.Right})");
 		return string.Join(" && ", conditions);
 	}
 
@@ -28,7 +28,7 @@ public static class UnionGenerationUtils
 	{
 		var hashCodes = parameters
 			.Select(x =>
-				$"{TypeInfos.EqualityComparer}<{x.Type.FullyQualifiedName}>.Default.GetHashCode({x.Value}!)")
+				$"{TypeInfos.EqualityComparer(x.Type)}.Default.GetHashCode({x.Value}!)")
 			.Prepend(caseIndex.ToString(CultureInfo.InvariantCulture));
 
 		return $"unchecked {{ return {string.Join(" * -1521134295 + ", hashCodes)}; }}";

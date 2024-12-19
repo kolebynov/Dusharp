@@ -88,7 +88,8 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 
 		var serializerBody = Expression.Block([
 			..serializeCasesExprs,
-			Expression.Call(null, JsonConverterHelpers.WriteEmptyObjectMethodInfo, writerExpr),
+			Expression.Call(null, JsonConverterHelpers.ThrowUnionInInvalidStateMethodInfo,
+				Expression.Constant(unionType), Expression.Constant(valueExpr.Name)),
 			Expression.Label(returnLabel),
 		]);
 

@@ -32,9 +32,6 @@ public static class JsonConverterHelpers
 	public static readonly MethodInfo WritePropertyGenericMethodInfo =
 		GetDelegateMethodInfo(WriteProperty<int>).GetGenericMethodDefinition();
 
-	public static readonly MethodInfo WriteEmptyObjectMethodInfo =
-		GetDelegateMethodInfo(WriteEmptyObject);
-
 	public static readonly MethodInfo ReadAndTokenIsPropertyNameMethodInfo =
 		GetDelegateMethodInfo(ReadAndTokenIsPropertyName);
 
@@ -54,6 +51,9 @@ public static class JsonConverterHelpers
 
 	public static readonly MethodInfo ThrowInvalidUnionJsonObjectMethodInfo =
 		GetDelegateMethodInfo(ThrowInvalidUnionJsonObject);
+
+	public static readonly MethodInfo ThrowUnionInInvalidStateMethodInfo =
+		GetDelegateMethodInfo(ThrowUnionInInvalidState);
 
 	public static void BeforeRead(ref Utf8JsonReader reader, Type unionType)
 	{
@@ -80,20 +80,11 @@ public static class JsonConverterHelpers
 		JsonSerializer.Serialize(writer, value, options);
 	}
 
-	public static void WriteEmptyObject(Utf8JsonWriter writer)
-	{
-		writer.WriteStartObject();
-		writer.WriteEndObject();
-	}
-
 	public static T? Deserialize<T>(ref Utf8JsonReader reader, JsonSerializerOptions options) =>
 		JsonSerializer.Deserialize<T>(ref reader, options);
 
 	public static bool ReadAndTokenIsPropertyName(ref Utf8JsonReader reader) =>
 		reader.Read() && reader.TokenType == JsonTokenType.PropertyName;
-
-	private static bool ValueTextEquals(ref Utf8JsonReader reader, byte[] utf8Name) =>
-		reader.ValueTextEquals(utf8Name);
 
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	public static void ThrowInvalidCaseName(ref Utf8JsonReader reader, Type unionType) =>
@@ -110,6 +101,13 @@ public static class JsonConverterHelpers
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	public static void ThrowInvalidUnionJsonObject(ref Utf8JsonReader reader) =>
 		throw new JsonException($"""There is an invalid union JSON object. It must contain property with case name. There is a token "{reader.TokenType}".""");
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	public static void ThrowUnionInInvalidState(Type unionType, string paramName) =>
+		throw new ArgumentException($"Failed to serialize union {unionType.Name}. It's in invalid state (probably a struct default value).", paramName);
+
+	private static bool ValueTextEquals(ref Utf8JsonReader reader, byte[] utf8Name) =>
+		reader.ValueTextEquals(utf8Name);
 
 	private static MethodInfo GetDelegateMethodInfo(Delegate @delegate) => @delegate.Method;
 }
