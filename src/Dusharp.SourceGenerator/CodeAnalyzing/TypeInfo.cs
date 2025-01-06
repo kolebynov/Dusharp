@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Dusharp.CodeAnalyzing;
 
 public sealed partial class TypeInfo : IEquatable<TypeInfo>

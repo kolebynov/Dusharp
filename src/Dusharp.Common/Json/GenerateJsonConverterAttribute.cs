@@ -1,5 +1,3 @@
-using System;
-
 namespace Dusharp.Json;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]

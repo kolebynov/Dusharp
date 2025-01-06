@@ -1,5 +1,3 @@
-using System;
-
 namespace Dusharp.CodeAnalyzing;
 
 public readonly struct TypeName : IEquatable<TypeName>

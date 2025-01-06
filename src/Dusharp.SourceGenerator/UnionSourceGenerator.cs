@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Dusharp.CodeAnalyzing;
+﻿using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
 using Dusharp.JsonConverterGeneration;
 using Dusharp.UnionGeneration;

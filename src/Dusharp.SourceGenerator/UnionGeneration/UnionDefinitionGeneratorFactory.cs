@@ -1,4 +1,3 @@
-using System;
 using Dusharp.CodeAnalyzing;
 
 namespace Dusharp.UnionGeneration;

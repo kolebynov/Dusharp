@@ -1,5 +1,3 @@
-using System;
-
 namespace Dusharp;
 
 [AttributeUsage(AttributeTargets.Method)]

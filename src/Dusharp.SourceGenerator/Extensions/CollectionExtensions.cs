@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Dusharp.Extensions;
 
 public static class CollectionExtensions

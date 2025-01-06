@@ -1,4 +1,3 @@
-using System;
 using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
 
 namespace Dusharp;

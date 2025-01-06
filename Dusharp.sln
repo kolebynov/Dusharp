@@ -28,6 +28,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.SourceGenerator.Com
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.SourceGenerator.Tests", "tests\Dusharp.SourceGenerator.Tests\Dusharp.SourceGenerator.Tests.csproj", "{B1D00BFA-C05B-457B-B6EA-11C6E07D45DC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dusharp.Benchmarks", "tests\Dusharp.Benchmarks\Dusharp.Benchmarks.csproj", "{4D7E785C-F596-4206-9910-50014869897E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{B1D00BFA-C05B-457B-B6EA-11C6E07D45DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1D00BFA-C05B-457B-B6EA-11C6E07D45DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1D00BFA-C05B-457B-B6EA-11C6E07D45DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D7E785C-F596-4206-9910-50014869897E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D7E785C-F596-4206-9910-50014869897E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D7E785C-F596-4206-9910-50014869897E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D7E785C-F596-4206-9910-50014869897E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6BE4037C-B7AB-4863-BB5F-F097E85BDD70} = {3DA8FA83-7B0C-4DCB-A62C-E3C3A74B7C71}
@@ -66,5 +72,6 @@ Global
 		{E944ED86-1555-43FA-84E9-358966E70202} = {3DA8FA83-7B0C-4DCB-A62C-E3C3A74B7C71}
 		{804324AF-86DB-49CE-8B1B-A9CF24316C54} = {3DA8FA83-7B0C-4DCB-A62C-E3C3A74B7C71}
 		{B1D00BFA-C05B-457B-B6EA-11C6E07D45DC} = {8CF0A092-053F-4093-B536-F50D8F234B54}
+		{4D7E785C-F596-4206-9910-50014869897E} = {8CF0A092-053F-4093-B536-F50D8F234B54}
 	EndGlobalSection
 EndGlobal

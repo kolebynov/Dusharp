@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
@@ -14,8 +11,21 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 {
 	private readonly ConcurrentDictionary<Type, UnionConverter> _converters = new();
 
-	public override bool CanConvert(Type typeToConvert) =>
-		typeof(IUnion).IsAssignableFrom(typeToConvert) && TryGetConverter(typeToConvert) != null;
+	public override bool CanConvert(Type typeToConvert)
+	{
+		if (!typeof(IUnion).IsAssignableFrom(typeToConvert))
+		{
+			return false;
+		}
+
+		var hasUnionAttribute = typeToConvert.GetCustomAttribute<UnionAttribute>(false) != null;
+		if (typeToConvert.IsValueType)
+		{
+			return hasUnionAttribute;
+		}
+
+		return hasUnionAttribute || typeToConvert.BaseType?.GetCustomAttribute<UnionAttribute>() != null;
+	}
 
 	public override IUnion? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
@@ -33,13 +43,11 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 	}
 
 	private UnionConverter GetConverter(Type unionType) =>
-		TryGetConverter(unionType) ?? throw new ArgumentException($"{unionType} is not a valid union type.");
-
-	private UnionConverter? TryGetConverter(Type unionType)
-	{
-		var realUnionType = GetRealUnionType(unionType);
-		return realUnionType != null ? _converters.GetOrAdd(realUnionType, static t => CreateConverter(t)) : null;
-	}
+		_converters.GetOrAdd(
+			unionType,
+			t => t.IsValueType || t.GetCustomAttribute<UnionAttribute>(false) != null
+				? CreateConverter(t)
+				: GetConverter(t.BaseType!));
 
 	private static UnionConverter CreateConverter(Type unionType)
 	{
@@ -233,26 +241,6 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 					deserializedParametersCountExpr, Expression.Constant(unionCase.Parameters.Length)),
 				Expression.Empty()),
 			Expression.Call(null, unionCase.CreateCaseMethod, caseParameterExprs));
-	}
-
-	private static Type? GetRealUnionType(Type unionType)
-	{
-		if (unionType.IsValueType)
-		{
-			return unionType.GetCustomAttribute<UnionAttribute>(false) is null ? null : unionType;
-		}
-
-		return FlattenHierarchy(unionType).FirstOrDefault(x => x.GetCustomAttribute<UnionAttribute>(false) is not null);
-	}
-
-	private static IEnumerable<Type> FlattenHierarchy(Type type)
-	{
-		var currentType = type;
-		while (currentType != null)
-		{
-			yield return currentType;
-			currentType = currentType.BaseType;
-		}
 	}
 
 	private readonly struct UnionCaseParameterInfo

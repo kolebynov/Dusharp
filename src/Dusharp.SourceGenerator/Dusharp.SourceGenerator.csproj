@@ -3,7 +3,6 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<ImplicitUsings>false</ImplicitUsings>
 		<RootNamespace>Dusharp</RootNamespace>
 	</PropertyGroup>
 

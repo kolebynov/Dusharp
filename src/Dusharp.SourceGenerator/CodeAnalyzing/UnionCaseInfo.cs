@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Dusharp.CodeAnalyzing;
 
 public sealed class UnionCaseInfo
