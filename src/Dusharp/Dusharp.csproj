@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<Version>0.6.0</Version>
+		<Version>0.6.0-rc.1</Version>
 		<Authors>Vitali Kolebyanov</Authors>
 		<Description>Dusharp is a C# source generator for creating discriminated unions.</Description>
 		<RepositoryUrl>https://github.com/kolebynov/Dusharp</RepositoryUrl>
@@ -11,7 +11,7 @@
 		<PackageTags>DU;SourceGenerator;Discriminated unions</PackageTags>
 		<IsPackable>True</IsPackable>
 		<IsRoslynComponent>true</IsRoslynComponent>
-		<PackageId>Dusharp</PackageId>
+		<PackageId>Temp</PackageId>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
@@ -25,7 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="[6.0,)" />
+		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -35,5 +35,11 @@
 		<None Include="$(OutputPath)\Dusharp.SourceGenerator.Common.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false"/>
 		<None Include="$(OutputPath)\Dusharp.Common.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false"/>
 	</ItemGroup>
+
+	<Target Name="_UpdatePackageId" BeforeTargets="$(PackDependsOn)" >
+		<PropertyGroup>
+			<PackageId>$(MSBuildProjectName)</PackageId>
+		</PropertyGroup>
+	</Target>
 
 </Project>
