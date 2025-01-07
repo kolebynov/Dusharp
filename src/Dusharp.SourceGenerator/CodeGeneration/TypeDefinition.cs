@@ -1,11 +1,11 @@
-using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
+using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
 
 namespace Dusharp.CodeGeneration;
 
 public sealed record class TypeDefinition
 {
-	private TypeName? _typeName;
+	private string? _nameWithoutGenerics;
 
 	public Accessibility? Accessibility { get; init; }
 
@@ -13,17 +13,34 @@ public sealed record class TypeDefinition
 
 	public required string Name { get; init; }
 
-	public required TypeKind Kind { get; init; }
+	public string NameWithoutGenerics
+	{
+		get
+		{
+			if (_nameWithoutGenerics != null)
+			{
+				return _nameWithoutGenerics;
+			}
 
-	public string FullName => (_typeName ??= new TypeName(Name, GenericParameters)).FullName;
+			var genericStart = Name.IndexOf('<');
+			if (genericStart < 0)
+			{
+				return _nameWithoutGenerics = Name;
+			}
+
+			return _nameWithoutGenerics = Name[..genericStart];
+		}
+	}
+
+	public required TypeKind Kind { get; init; }
 
 	public IReadOnlyList<string> Attributes { get; init; } = [];
 
-	public IReadOnlyList<string> GenericParameters { get; init; } = [];
-
-	public IReadOnlyList<string> InheritedTypes { get; init; } = [];
+	public IReadOnlyList<TypeInfo> InheritedTypes { get; init; } = [];
 
 	public IReadOnlyList<FieldDefinition> Fields { get; init; } = [];
+
+	public IReadOnlyList<PropertyDefinition> Properties { get; init; } = [];
 
 	public IReadOnlyList<ConstructorDefinition> Constructors { get; init; } = [];
 

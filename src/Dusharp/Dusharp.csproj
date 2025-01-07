@@ -3,8 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-		<Version>0.5.3</Version>
+		<Version>0.6.0</Version>
 		<Authors>Vitali Kolebyanov</Authors>
 		<Description>Dusharp is a C# source generator for creating discriminated unions.</Description>
 		<RepositoryUrl>https://github.com/kolebynov/Dusharp</RepositoryUrl>
@@ -12,7 +11,7 @@
 		<PackageTags>DU;SourceGenerator;Discriminated unions</PackageTags>
 		<IsPackable>True</IsPackable>
 		<IsRoslynComponent>true</IsRoslynComponent>
-		<PackageId>Dusharp</PackageId>
+		<PackageId>Temp</PackageId>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
@@ -21,12 +20,26 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Dusharp.SourceGenerator\Dusharp.SourceGenerator.csproj" />
+		<ProjectReference Include="..\Dusharp.SourceGenerator\Dusharp.SourceGenerator.csproj" PrivateAssets="all"/>
+		<ProjectReference Include="..\Dusharp.Common\Dusharp.Common.csproj" PrivateAssets="all"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false"/>
 		<None Include="$(OutputPath)\Dusharp.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+		<None Include="$(OutputPath)\Dusharp.SourceGenerator.Common.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+		<None Include="$(OutputPath)\Dusharp.SourceGenerator.Common.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false"/>
+		<None Include="$(OutputPath)\Dusharp.Common.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false"/>
 	</ItemGroup>
+
+	<Target Name="_UpdatePackageId" BeforeTargets="$(PackDependsOn)" >
+		<PropertyGroup>
+			<PackageId>$(MSBuildProjectName)</PackageId>
+		</PropertyGroup>
+	</Target>
 
 </Project>

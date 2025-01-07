@@ -1,38 +1,49 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
 using Dusharp.Extensions;
 using Microsoft.CodeAnalysis;
+using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
 using TypeKind = Dusharp.CodeGeneration.TypeKind;
 
 namespace Dusharp.UnionGeneration;
 
 public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 {
-	private readonly Dictionary<UnionCaseInfo, TypeDefinition> _nestedUnionCaseTypes;
+	private readonly Dictionary<UnionCaseInfo, UnionCaseNestedType> _unionCaseNestedTypes;
 
 	public ClassUnionDefinitionGenerator(UnionInfo union)
 	{
-		_nestedUnionCaseTypes = GetUnionCaseNestedTypes(union, union.GetTypeName().FullName);
+		_unionCaseNestedTypes = GetUnionCaseNestedTypes(union);
 	}
 
 	public TypeKind TypeKind => TypeKind.Class(true, false);
 
 	public Action<MethodDefinition, CodeWriter> GetUnionCaseMethodBodyWriter(UnionCaseInfo unionCase)
 	{
-		var nestedUnionCaseType = _nestedUnionCaseTypes[unionCase];
+		var caseNestedTypeInfo = _unionCaseNestedTypes[unionCase].TypeInfo;
 		return (def, methodBlock) => methodBlock.AppendLine(unionCase.HasParameters
-			? $"return new {nestedUnionCaseType.FullName}({string.Join(", ", def.Parameters.Select(x => x.Name))});"
-			: $"return {nestedUnionCaseType.FullName}.Instance;");
+			? $"return new {caseNestedTypeInfo}({string.Join(", ", def.Parameters.Select(x => x.Name))});"
+			: $"return {caseNestedTypeInfo}.Instance;");
+	}
+
+	public string GetUnionCaseCheckExpression(UnionCaseInfo unionCase)
+	{
+		var caseNestedTypeInfo = _unionCaseNestedTypes[unionCase].TypeInfo;
+		return $"this is {caseNestedTypeInfo}";
+	}
+
+	public IEnumerable<string> GetUnionCaseParameterAccessors(UnionCaseInfo unionCase)
+	{
+		var caseNestedTypeInfo = _unionCaseNestedTypes[unionCase].TypeInfo;
+		return unionCase.Parameters
+			.Select(x => $"{TypeInfos.Unsafe}.As<{caseNestedTypeInfo}>(this).{x.Name}");
 	}
 
 	public MethodDefinition AdjustDefaultEqualsMethod(MethodDefinition equalsMethod) =>
 		equalsMethod with
 		{
 			BodyWriter = static (def, methodBlock) =>
-				methodBlock.AppendLine($"return object.ReferenceEquals(this, {def.Parameters[0].Name});"),
+				methodBlock.AppendLine($"return {TypeInfos.Object}.ReferenceEquals(this, {def.Parameters[0].Name});"),
 		};
 
 	public MethodDefinition AdjustSpecificEqualsMethod(MethodDefinition equalsMethod) =>
@@ -40,7 +51,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		{
 			MethodModifier = MethodModifier.Virtual(),
 			BodyWriter = static (def, methodBlock) =>
-				methodBlock.AppendLine($"return object.ReferenceEquals(this, {def.Parameters[0].Name});"),
+				methodBlock.AppendLine($"return {TypeInfos.Object}.ReferenceEquals(this, {def.Parameters[0].Name});"),
 		};
 
 	public Action<MethodDefinition, CodeWriter> GetGetHashCodeMethodBodyWriter() =>
@@ -52,18 +63,8 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			var leftName = def.Parameters[0].Name;
 			var rightName = def.Parameters[1].Name;
 			operatorBodyBlock.AppendLine(
-				$"return !object.ReferenceEquals({leftName}, null) ? left.Equals({rightName}) : object.ReferenceEquals({leftName}, {rightName});");
+				$"return !{TypeInfos.Object}.ReferenceEquals({leftName}, null) ? left.Equals({rightName}) : {TypeInfos.Object}.ReferenceEquals({leftName}, {rightName});");
 		};
-
-	public void WriteMatchBlock(UnionCaseInfo unionCase, Func<string, string> matchedCaseDelegateCallProvider,
-		CodeWriter matchBlock)
-	{
-		var caseNestedType = _nestedUnionCaseTypes[unionCase];
-		matchBlock.AppendLine($"var unionCase = this as {caseNestedType.FullName};");
-		var argumentsStr = string.Join(", ", unionCase.Parameters.Select(x => $"unionCase.{x.Name}"));
-		matchBlock.AppendLine(
-			$"if (!object.ReferenceEquals(unionCase, null)) {{ {matchedCaseDelegateCallProvider(argumentsStr)} }}");
-	}
 
 	public TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition) =>
 		typeDefinition with
@@ -76,17 +77,20 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 					BodyWriter = (_, _) => { },
 				},
 			],
-			NestedTypes = _nestedUnionCaseTypes.Select(x => x.Value).ToArray(),
+			NestedTypes = _unionCaseNestedTypes.Select(x => x.Value.TypeDefinition).ToArray(),
 		};
 
 	public IReadOnlyList<TypeDefinition> GetAdditionalTypes() => [];
 
-	private static Dictionary<UnionCaseInfo, TypeDefinition> GetUnionCaseNestedTypes(UnionInfo union, string unionTypeName) =>
-		union.Cases.ToDictionary(x => x, x => GetUnionCaseNestedType(x, union, unionTypeName));
+	private static Dictionary<UnionCaseInfo, UnionCaseNestedType> GetUnionCaseNestedTypes(UnionInfo union) =>
+		union.Cases.ToDictionary(x => x, x => GetUnionCaseNestedType(x, union));
 
-	private static TypeDefinition GetUnionCaseNestedType(UnionCaseInfo unionCase, UnionInfo union, string unionTypeName)
+	private static UnionCaseNestedType GetUnionCaseNestedType(UnionCaseInfo unionCase, UnionInfo union)
 	{
-		var unionCaseClassName = $"{unionCase.Name}Case";
+		var caseClassName = $"{unionCase.Name}Case";
+		var caseTypeInfo = TypeInfo.SpecificType(union.TypeInfo.Namespace, union.TypeInfo,
+			caseClassName, TypeInfo.TypeKind.ReferenceType(false));
+
 		var fields = unionCase.Parameters.Select(caseParameter => new FieldDefinition
 		{
 			Accessibility = Accessibility.Public,
@@ -100,18 +104,18 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 				Accessibility = Accessibility.Public,
 				IsStatic = true,
 				IsReadOnly = true,
-				TypeName = unionCaseClassName,
+				TypeName = new TypeName(caseTypeInfo, false),
 				Name = "Instance",
-				Initializer = $"new {unionCaseClassName}()",
+				Initializer = $"new {caseTypeInfo}()",
 			})
 			: fields;
 
-		return new TypeDefinition
+		var typeDefinition = new TypeDefinition
 		{
 			Accessibility = Accessibility.Private,
 			Kind = TypeKind.Class(false, true),
-			Name = unionCaseClassName,
-			InheritedTypes = [unionTypeName],
+			Name = caseClassName,
+			InheritedTypes = [union.TypeInfo],
 			Fields = fields.ToArray(),
 			Constructors =
 			[
@@ -131,19 +135,21 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			Methods =
 			[
 				GetUnionCaseToStringMethod(unionCase),
-				.. GetUnionCaseEqualsMethods(unionCase, union, unionCaseClassName, unionTypeName),
+				.. GetUnionCaseEqualsMethods(unionCase, caseTypeInfo, union),
 			],
 		};
+
+		return new UnionCaseNestedType(caseTypeInfo, typeDefinition);
 	}
 
 	private static MethodDefinition[] GetUnionCaseEqualsMethods(
-		UnionCaseInfo unionCase, UnionInfo union, string caseClassName, string unionTypeName)
+		UnionCaseInfo unionCase, TypeInfo caseTypeInfo, UnionInfo union)
 	{
 		var getHashCodeMethodDefinition = new MethodDefinition
 		{
 			Accessibility = Accessibility.Public,
 			MethodModifier = MethodModifier.Override(),
-			ReturnType = "int",
+			ReturnType = TypeNames.Int32,
 			Name = "GetHashCode",
 			BodyWriter = (_, methodBlock) =>
 			{
@@ -166,27 +172,27 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			{
 				Accessibility = Accessibility.Public,
 				MethodModifier = MethodModifier.Override(),
-				ReturnType = "bool",
+				ReturnType = TypeNames.Boolean,
 				Name = "Equals",
-				Parameters = [new MethodParameter($"{unionTypeName}?", "other")],
-				BodyWriter = (_, methodBlock) => WriteEqualsMethodBody(caseClassName, methodBlock),
+				Parameters = [new MethodParameter(new TypeName(union.TypeInfo, true), "other")],
+				BodyWriter = (_, methodBlock) => WriteEqualsMethodBody(caseTypeInfo, methodBlock),
 			},
 			new MethodDefinition
 			{
 				Accessibility = Accessibility.Public,
 				MethodModifier = MethodModifier.Override(),
-				ReturnType = "bool",
+				ReturnType = TypeNames.Boolean,
 				Name = "Equals",
-				Parameters = [new MethodParameter("object?", "other")],
-				BodyWriter = (_, methodBlock) => WriteEqualsMethodBody(caseClassName, methodBlock),
+				Parameters = [new MethodParameter(TypeNames.Object(true), "other")],
+				BodyWriter = (_, methodBlock) => WriteEqualsMethodBody(caseTypeInfo, methodBlock),
 			},
 			getHashCodeMethodDefinition,
 			new MethodDefinition
 			{
 				Accessibility = Accessibility.Private,
-				ReturnType = "bool",
+				ReturnType = TypeNames.Boolean,
 				Name = structuralEqualsMethod,
-				Parameters = [new MethodParameter(caseClassName, "other")],
+				Parameters = [new MethodParameter(new TypeName(caseTypeInfo, false), "other")],
 				BodyWriter = (def, methodBlock) =>
 				{
 					methodBlock
@@ -198,11 +204,11 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			},
 		];
 
-		static void WriteEqualsMethodBody(string caseClassName, CodeWriter methodBodyBlock)
+		static void WriteEqualsMethodBody(TypeInfo caseTypeInfo, CodeWriter methodBodyBlock)
 		{
-			methodBodyBlock.AppendLine("if (object.ReferenceEquals(this, other)) return true;");
-			methodBodyBlock.AppendLine($"var otherCasted = other as {caseClassName};");
-			methodBodyBlock.AppendLine("if (object.ReferenceEquals(otherCasted, null)) return false;");
+			methodBodyBlock.AppendLine($"if ({TypeInfos.Object}.ReferenceEquals(this, other)) return true;");
+			methodBodyBlock.AppendLine($"var otherCasted = other as {caseTypeInfo};");
+			methodBodyBlock.AppendLine($"if ({TypeInfos.Object}.ReferenceEquals(otherCasted, null)) return false;");
 			methodBodyBlock.AppendLine($"return {structuralEqualsMethod}(otherCasted);");
 		}
 	}
@@ -212,7 +218,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		{
 			Accessibility = Accessibility.Public,
 			MethodModifier = MethodModifier.Override(),
-			ReturnType = "string",
+			ReturnType = TypeNames.String(),
 			Name = "ToString",
 			BodyWriter = (_, methodBlock) => methodBlock
 				.Append("return ")
@@ -220,4 +226,6 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 					unionCase.Name, unionCase.Parameters.Select(x => (x.Name, x.Name)).ToArray()))
 				.AppendLine(";"),
 		};
+
+	private readonly record struct UnionCaseNestedType(TypeInfo TypeInfo, TypeDefinition TypeDefinition);
 }

@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using Microsoft.CodeAnalysis;
-
 namespace Dusharp.CodeAnalyzing;
 
 public sealed class UnionInfo
@@ -9,12 +6,12 @@ public sealed class UnionInfo
 
 	public IReadOnlyList<UnionCaseInfo> Cases { get; }
 
-	public INamedTypeSymbol TypeSymbol { get; }
+	public TypeInfo TypeInfo { get; }
 
-	public UnionInfo(string name, IReadOnlyList<UnionCaseInfo> cases, INamedTypeSymbol typeSymbol)
+	public UnionInfo(string name, IReadOnlyList<UnionCaseInfo> cases, TypeInfo typeInfo)
 	{
 		Name = name;
 		Cases = cases;
-		TypeSymbol = typeSymbol;
+		TypeInfo = typeInfo;
 	}
 }

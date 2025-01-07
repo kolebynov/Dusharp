@@ -3,24 +3,20 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<ImplicitUsings>false</ImplicitUsings>
 		<RootNamespace>Dusharp</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Dusharp" Version="0.4.0" PrivateAssets="all"/>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
-		<PackageReference Include="PolySharp" Version="1.14.1">
+		<PackageReference Include="Dusharp" Version="0.5.3" PrivateAssets="all"/>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" PrivateAssets="all"/>
+		<PackageReference Include="PolySharp" Version="1.15.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="EmbeddedCode\*.cs">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</EmbeddedResource>
-		<Compile Remove="EmbeddedCode\*.cs"/>
+		<ProjectReference Include="..\Dusharp.SourceGenerator.Common\Dusharp.SourceGenerator.Common.csproj"/>
 	</ItemGroup>
 
 </Project>

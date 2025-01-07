@@ -1,6 +1,9 @@
+using Dusharp.Json;
+
 namespace Dusharp.Tests
 {
 	[Union]
+	[GenerateJsonConverter]
 	public partial class TestUnion<T>
 	{
 		[UnionCase]
