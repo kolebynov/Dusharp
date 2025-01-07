@@ -184,10 +184,9 @@ All of these details about memory layout and struct size are implementation-spec
 `Dusharp` supports serialization and deserialization of unions using either a default union JSON converter or a source-generated JSON converter specific to the union type.
 
 To generate a specific JSON converter, the union type must be marked with the `[Dusharp.Json.GenerateJsonConverterAttribute]` attribute.
+The source-generated converter is slightly faster and avoids boxing/unboxing struct unions during serialization and deserialization.
 - **Parameterless Union Cases:** Serialized as a string containing only the case name.
 - **Union Cases with Parameters:** Serialized as an object where the case name is the key, followed by an object containing the case parameters.
-- **Limitations with NativeAOT:** The `DefaultUnionJsonConverter` cannot be used with NativeAOT because it relies on expression trees.
-- **NativeAOT Support:** For NativeAOT scenarios, use source-generated JSON converters tailored to specific union types.
 
 ```csharp
 using System.Text.Json;
@@ -217,6 +216,47 @@ Console.WriteLine(serializedShape3); // {"Rectangle":{"width": 2.0,"height": 2.0
 Shape<double> deserializedShape = JsonSerializer.Deserialize<Shape<double>>(serializedShape3, options);
 Console.WriteLine(deserializedShape.IsRectangle); // True
 ```
+
+### Json converters benchmark results
+
+```
+
+BenchmarkDotNet v0.14.0, Fedora Linux 41 (KDE Plasma)
+AMD Ryzen 7 5800H with Radeon Graphics, 1 CPU, 16 logical and 8 physical cores
+.NET SDK 9.0.101
+  [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+  Job-GFQIYP : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+
+Platform=X64  Runtime=.NET 9.0  MaxIterationCount=8
+MaxWarmupIterationCount=7  MinIterationCount=2  MinWarmupIterationCount=2
+
+```
+
+#### Class union
+
+| Method                                | ClassUnion               |          Mean |         Error |       StdDev |       Gen0 | Allocated |
+|---------------------------------------|--------------------------|--------------:|--------------:|-------------:|-----------:|----------:|
+| **DefaultConverter_ClassUnion_Write** | **Case1**                |  **49.83 ns** |  **2.756 ns** | **1.441 ns** | **0.0076** |  **64 B** |
+| SpecializedConverter_ClassUnion_Write | Case1                    |      23.46 ns |      0.642 ns |     0.336 ns |          - |         - |
+| DefaultConverter_ClassUnion_Read      | Case1                    |      55.44 ns |      2.343 ns |     1.226 ns |     0.0076 |      64 B |
+| SpecializedConverter_ClassUnion_Read  | Case1                    |      38.99 ns |      0.612 ns |     0.272 ns |          - |         - |
+| **DefaultConverter_ClassUnion_Write** | **Case4(...):00 } [86]** | **352.12 ns** | **11.235 ns** | **5.876 ns** | **0.0076** |  **64 B** |
+| SpecializedConverter_ClassUnion_Write | Case4(...):00 } [86]     |     312.50 ns |      4.621 ns |     2.052 ns |          - |         - |
+| DefaultConverter_ClassUnion_Read      | Case4(...):00 } [86]     |     695.45 ns |     23.740 ns |    12.417 ns |     0.0191 |     160 B |
+| SpecializedConverter_ClassUnion_Read  | Case4(...):00 } [86]     |     620.00 ns |     13.440 ns |     5.967 ns |     0.0114 |      96 B |
+
+#### Struct union
+
+| Method                                 | StructUnion              |          Mean |        Error |       StdDev |       Gen0 | Allocated |
+|----------------------------------------|--------------------------|--------------:|-------------:|-------------:|-----------:|----------:|
+| **DefaultConverter_StructUnion_Write** | **Case1**                |  **55.55 ns** | **2.735 ns** | **1.431 ns** | **0.0134** | **112 B** |
+| SpecializedConverter_StructUnion_Write | Case1                    |      24.13 ns |     0.549 ns |     0.287 ns |          - |         - |
+| DefaultConverter_StructUnion_Read      | Case1                    |      59.09 ns |     1.132 ns |     0.175 ns |     0.0134 |     112 B |
+| SpecializedConverter_StructUnion_Read  | Case1                    |      39.33 ns |     0.674 ns |     0.240 ns |          - |         - |
+| **DefaultConverter_StructUnion_Write** | **Case4(...):00 } [86]** | **347.04 ns** | **5.616 ns** | **0.869 ns** | **0.0134** | **112 B** |
+| SpecializedConverter_StructUnion_Write | Case4(...):00 } [86]     |     307.65 ns |     5.607 ns |     2.000 ns |          - |         - |
+| DefaultConverter_StructUnion_Read      | Case4(...):00 } [86]     |     649.65 ns |     8.134 ns |     1.259 ns |     0.0191 |     160 B |
+| SpecializedConverter_StructUnion_Read  | Case4(...):00 } [86]     |     610.82 ns |     4.753 ns |     0.736 ns |     0.0057 |      48 B |
 
 ## Upcoming Features
 - Unsafe features support (type pointers, method pointers).

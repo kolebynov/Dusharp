@@ -30,8 +30,9 @@
         <li>✅ <strong>Generics</strong>: Generics support for union types.</li>
         <li>✅ <strong>Pretty print</strong>: Using overloaded <code>ToString()</code>.</li>
         <li>✅ <strong>Struct unions</strong>: With efficient memory layout for unions as structs.</li>
-        <li>❌ <strong>JSON serialization/deserialization</strong>: Support for unions with <code>System.Text.Json</code>
-            (coming soon).</li>
+        <li>✅ <strong>JSON serialization/deserialization</strong>: Support for unions with
+            <code>System.Text.Json</code>.
+        </li>
     </ul>
     <h2 id="installation">Installation</h2>
     <p>Dusharp is available as a NuGet package. You can install it using the NuGet package manager:</p>
@@ -41,25 +42,35 @@
     <p><code>Dusharp</code> uses attributes to generate discriminated unions and case methods. Here&#39;s how to get
         started:</p>
     <h3 id="1-define-a-union">1. Define a Union</h3>
-    <p>To define a union, annotate a class with the <code>[Dusharp.UnionAttribute]</code> attribute.</p>
-    <pre><code class="lang-csharp">using Dusharp;
+    <p>To define a union, annotate a class with the <code>[Dusharp.UnionAttribute]</code> attribute.
+        <code>[Dusharp.Json.GenerateJsonConverterAttribute]</code> generates JSON converter for the union (will explain
+        below).
+    </p>
+    <pre><code class="lang-csharp"><span class="hljs-keyword">using</span> Dusharp;
+<span class="hljs-keyword">using</span> Dusharp.Json;
 
-[Union]
-public partial <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Shape</span>&lt;<span class="hljs-title">T</span>&gt;</span>
-    where T : <span class="hljs-class"><span class="hljs-keyword">struct</span>, <span class="hljs-title">INumber</span>&lt;<span class="hljs-title">T</span>&gt;</span>
-{
-}
+[<span class="hljs-keyword">Union</span>]
+[GenerateJsonConverter]
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">partial</span> <span class="hljs-keyword">class</span> Shape&lt;T&gt;
+    <span class="hljs-keyword">where</span> T : struct, INumber&lt;T&gt;
+<span class="hljs-comment">{
+}</span>
 </code></pre>
     <h3 id="2-define-union-cases">2. Define Union Cases</h3>
     <p>Define union cases by creating public static partial methods and marking them with the
         <code>[Dusharp.UnionCaseAttribute]</code> attribute. The method body will be automatically generated.
     </p>
     <pre><code class="lang-csharp"><span class="hljs-keyword">using</span> Dusharp;
+<span class="hljs-keyword">using</span> Dusharp.Json;
 
 [Union]
+[GenerateJsonConverter]
 <span class="hljs-keyword">public</span> partial <span class="hljs-keyword">class</span> Shape&lt;T&gt;
     where T : <span class="hljs-keyword">struct</span>, INumber&lt;T&gt;
 {
+    [UnionCase]
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> partial Shape&lt;T&gt; Point();
+
     [UnionCase]
     <span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> partial Shape&lt;T&gt; Circle(T radius);
 
@@ -73,6 +84,7 @@ public partial <span class="hljs-class"><span class="hljs-keyword">class</span> 
     <pre><code class="lang-csharp">Shape&lt;<span class="hljs-keyword">double</span>&gt; shape = Shape&lt;<span class="hljs-keyword">double</span>&gt;.Circle(<span class="hljs-number">5.0</span>);
 
 <span class="hljs-keyword">string</span> result = shape.Match(
+    () =&gt; <span class="hljs-string">"Point"</span>,
     radius =&gt; $<span class="hljs-string">"Circle with radius {radius}"</span>,
     (<span class="hljs-built_in">width</span>, <span class="hljs-built_in">height</span>) =&gt; $<span class="hljs-string">"Rectangle with width {width} and height {height}"</span>);
 
@@ -89,20 +101,16 @@ Shape&lt;<span class="hljs-keyword">double</span>&gt; shape2 = Shape&lt;<span cl
 </code></pre>
     <h2 id="struct-unions">Struct unions</h2>
     <p><code>Dusharp</code> supports struct unions, allowing you to reduce allocations. You can define struct union the
-        same
-        way as for class union using the <code>[Dusharp.UnionAttribute]</code> attribute. This feature generates memory
-        efficient unions.</p>
+        same way as for class union using the <code>[Dusharp.UnionAttribute]</code> attribute. This feature generates
+        memory efficient unions.</p>
     <h3 id="blittable-types">Blittable Types</h3>
     <p>Blittable types (e.g., <code>int</code>, <code>double</code>, etc., and structs contain only blittable types)
-        from
-        different cases will share the same memory space using the <code>[StructLayout(LayoutKind.Explicit)]</code>
+        from different cases will share the same memory space using the <code>[StructLayout(LayoutKind.Explicit)]</code>
         attribute. This enables efficient memory usage by overlapping the fields in the union.</p>
     <h3 id="reference-types">Reference Types</h3>
     <p>For reference type parameters, <code>Dusharp</code> uses a shared <code>object</code> fields to store reference
-        type
-        parameters from different cases. The <code>object</code> fields will be cast to their target types using the
-        no-op
-        <code>Unsafe.As</code> method, providing an efficient way to handle reference types in struct unions.
+        type parameters from different cases. The <code>object</code> fields will be cast to their target types using
+        the no-op <code>Unsafe.As</code> method, providing an efficient way to handle reference types in struct unions.
     </p>
     <h3 id="example">Example</h3>
     <p>For instance, consider a union that contains both blittable and reference type parameters:</p>
@@ -139,17 +147,14 @@ Shape&lt;<span class="hljs-keyword">double</span>&gt; shape2 = Shape&lt;<span cl
             references in memory.
         </li>
         <li><code>UnionBlittableDataField</code> is an instance of <code>TestUnionBlittableData</code>, where the
-            blittable
-            data (e.g., <code>long</code>, <code>Guid</code>) is stored.</li>
+            blittable data (e.g., <code>long</code>, <code>Guid</code>) is stored.</li>
         <li><code>Index</code> tracks the active case, allowing the <code>Match</code> and equality methods to know
-            which
-            union case is currently stored.</li>
+            which union case is currently stored.</li>
     </ul>
     <h4 id="memory-layout-optimization-for-blittable-types">Memory Layout Optimization for Blittable Types</h4>
     <p>For blittable types, the generator uses a memory-efficient layout where the fields of different union cases are
         overlapped in memory using the <code>[StructLayout(LayoutKind.Explicit)]</code> attribute. This reduces memory
-        usage
-        by sharing memory space for compatible types.</p>
+        usage by sharing memory space for compatible types.</p>
     <pre><code class="lang-csharp">[<span class="hljs-name">StructLayout</span>(<span class="hljs-name">LayoutKind.Explicit</span>)]
 internal struct TestUnionBlittableData
 {
@@ -179,35 +184,255 @@ internal struct TestUnionBlittableData
             <code>long</code> and <code>Guid</code> types.
         </li>
         <li><code>FieldOffset(0)</code> ensures that the memory space for <code>Case1Data</code> and
-            <code>Case2Data</code>
-            is shared, meaning both cases will occupy the same memory region. This is a key feature that allows for
-            efficient memory usage when dealing with blittable types.
+            <code>Case2Data</code> is shared, meaning both cases will occupy the same memory region. This is a key
+            feature that allows for efficient memory usage when dealing with blittable types.
         </li>
     </ul>
     <h4 id="size-of-a-union">Size of a union</h4>
     <p>In this example, the size of the <code>TestUnion</code> union is <strong>56 bytes</strong>:</p>
     <ul>
         <li>2 <code>object</code> fields: <strong>16 bytes</strong> (each object reference is <strong>8 bytes</strong>
-            on a
-            64-bit system)</li>
+            on a 64-bit system)</li>
         <li><code>TestUnionBlittableData</code>: <strong>32 bytes</strong> (the size of the largest blittable case,
-            which
-            contains 2 <code>Guid</code> parameters, each being <strong>16 bytes</strong>)</li>
+            which contains 2 <code>Guid</code> parameters, each being <strong>16 bytes</strong>)</li>
         <li><code>Index</code> field: <strong>1 byte</strong> + padding for alignment, which totals <strong>8
-                bytes</strong>
-        </li>
+                bytes</strong></li>
     </ul>
     <p>Thus, the total size is <code>16 + 32 + 8 = 56 bytes</code>.</p>
     <h4 id="important-note">Important Note</h4>
     <p>All of these details about memory layout and struct size are implementation-specific and subject to change. Users
         should not rely on these internal details or use them directly in their code. The behavior and memory management
-        may
-        evolve in future versions to improve performance or efficiency.</p>
+        may evolve in future versions to improve performance or efficiency.</p>
+    <h2 id="unions-serialization-deserialization">Unions serialization/deserialization</h2>
+    <p><code>Dusharp</code> supports serialization and deserialization of unions using either a default union JSON
+        converter or a source-generated JSON converter specific to the union type.</p>
+    <p>To generate a specific JSON converter, the union type must be marked with the
+        <code>[Dusharp.Json.GenerateJsonConverterAttribute]</code> attribute.
+        The source-generated converter is slightly faster and avoids boxing/unboxing struct unions during serialization
+        and deserialization.
+    </p>
+    <ul>
+        <li><strong>Parameterless Union Cases:</strong> Serialized as a string containing only the case name.</li>
+        <li><strong>Union Cases with Parameters:</strong> Serialized as an object where the case name is the key,
+            followed by an object containing the case parameters.</li>
+    </ul>
+    <pre><code class="lang-csharp">using System.Text.Json;
+
+Shape&lt;<span class="hljs-keyword">double</span>&gt; shape1 = Shape&lt;<span class="hljs-keyword">double</span>&gt;.Point();
+Shape&lt;<span class="hljs-keyword">double</span>&gt; shape2 = Shape&lt;<span class="hljs-keyword">double</span>&gt;.Circle(<span class="hljs-number">5.0</span>);
+Shape&lt;<span class="hljs-keyword">double</span>&gt; shape3 = Shape&lt;<span class="hljs-keyword">double</span>&gt;.Rectangle(<span class="hljs-number">2.0</span>, <span class="hljs-number">2.0</span>);
+
+JsonSerializerOptions <span class="hljs-keyword">options</span> = <span class="hljs-keyword">new</span> JsonSerializerOptions
+{
+    Converters =
+    {
+        <span class="hljs-comment">// Default generic JSON converter can convert any union type.</span>
+        <span class="hljs-keyword">new</span> DefaultUnionJsonConverter(),
+        <span class="hljs-comment">// Or</span>
+        <span class="hljs-comment">// Specific source-generated JSON converter for the Shape&lt;double&gt; union.</span>
+        <span class="hljs-keyword">new</span> Shape&lt;<span class="hljs-keyword">double</span>&gt;.JsonConverter(),
+    },
+};
+
+string serializedShape3 = JsonSerializer.Serialize(shape3, <span class="hljs-keyword">options</span>);
+
+Console.<span class="hljs-keyword">WriteLine</span>(JsonSerializer.Serialize(shape1, <span class="hljs-keyword">options</span>)); <span class="hljs-comment">// "Point"</span>
+Console.<span class="hljs-keyword">WriteLine</span>(JsonSerializer.Serialize(shape2, <span class="hljs-keyword">options</span>)); <span class="hljs-comment">// {"Circle":{"radius": 5.0}}</span>
+Console.<span class="hljs-keyword">WriteLine</span>(serializedShape3); <span class="hljs-comment">// {"Rectangle":{"width": 2.0,"height": 2.0}}</span>
+
+Shape&lt;<span class="hljs-keyword">double</span>&gt; deserializedShape = JsonSerializer.Deserialize&lt;Shape&lt;<span class="hljs-keyword">double</span>&gt;&gt;(serializedShape3, <span class="hljs-keyword">options</span>);
+Console.<span class="hljs-keyword">WriteLine</span>(deserializedShape.IsRectangle); <span class="hljs-comment">// True</span>
+</code></pre>
+    <h3 id="json-converters-benchmark-results">Json converters benchmark results</h3>
+    <pre><code>
+BenchmarkDotNet v0<span class="hljs-meta">.14</span><span class="hljs-meta">.0</span>, Fedora Linux <span class="hljs-number">41</span> (KDE Plasma)
+AMD Ryzen <span class="hljs-number">7</span> <span class="hljs-number">5800H</span> with Radeon Graphics, <span class="hljs-number">1</span> <span class="hljs-meta">CPU</span>, <span class="hljs-number">16</span> logical <span class="hljs-keyword">and</span> <span class="hljs-number">8</span> physical cores
+<span class="hljs-meta">.NET</span> SDK <span class="hljs-number">9.0</span><span class="hljs-meta">.101</span>
+  [Host]     : .NET <span class="hljs-number">9.0</span><span class="hljs-meta">.0</span> (<span class="hljs-number">9.0</span><span class="hljs-meta">.24</span><span class="hljs-meta">.52809</span>), X64 RyuJIT AVX2
+  Job-GFQIYP : .NET <span class="hljs-number">9.0</span><span class="hljs-meta">.0</span> (<span class="hljs-number">9.0</span><span class="hljs-meta">.24</span><span class="hljs-meta">.52809</span>), X64 RyuJIT AVX2
+
+Platform=X64  Runtime=.NET <span class="hljs-number">9.0</span>  MaxIterationCount=<span class="hljs-number">8</span>
+MaxWarmupIterationCount=<span class="hljs-number">7</span>  MinIterationCount=<span class="hljs-number">2</span>  MinWarmupIterationCount=<span class="hljs-number">2</span>
+</code></pre>
+    <h4 id="class-union">Class union</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>ClassUnion</th>
+                <th style="text-align:right">Mean</th>
+                <th style="text-align:right">Error</th>
+                <th style="text-align:right">StdDev</th>
+                <th style="text-align:right">Gen0</th>
+                <th style="text-align:right">Allocated</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>DefaultConverter_ClassUnion_Write</strong></td>
+                <td><strong>Case1</strong></td>
+                <td style="text-align:right"><strong>49.83 ns</strong></td>
+                <td style="text-align:right"><strong>2.756 ns</strong></td>
+                <td style="text-align:right"><strong>1.441 ns</strong></td>
+                <td style="text-align:right"><strong>0.0076</strong></td>
+                <td style="text-align:right"><strong>64 B</strong></td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_ClassUnion_Write</td>
+                <td>Case1</td>
+                <td style="text-align:right">23.46 ns</td>
+                <td style="text-align:right">0.642 ns</td>
+                <td style="text-align:right">0.336 ns</td>
+                <td style="text-align:right">-</td>
+                <td style="text-align:right">-</td>
+            </tr>
+            <tr>
+                <td>DefaultConverter_ClassUnion_Read</td>
+                <td>Case1</td>
+                <td style="text-align:right">55.44 ns</td>
+                <td style="text-align:right">2.343 ns</td>
+                <td style="text-align:right">1.226 ns</td>
+                <td style="text-align:right">0.0076</td>
+                <td style="text-align:right">64 B</td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_ClassUnion_Read</td>
+                <td>Case1</td>
+                <td style="text-align:right">38.99 ns</td>
+                <td style="text-align:right">0.612 ns</td>
+                <td style="text-align:right">0.272 ns</td>
+                <td style="text-align:right">-</td>
+                <td style="text-align:right">-</td>
+            </tr>
+            <tr>
+                <td><strong>DefaultConverter_ClassUnion_Write</strong></td>
+                <td><strong>Case4(...):00 } [86]</strong></td>
+                <td style="text-align:right"><strong>352.12 ns</strong></td>
+                <td style="text-align:right"><strong>11.235 ns</strong></td>
+                <td style="text-align:right"><strong>5.876 ns</strong></td>
+                <td style="text-align:right"><strong>0.0076</strong></td>
+                <td style="text-align:right"><strong>64 B</strong></td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_ClassUnion_Write</td>
+                <td>Case4(...):00 } [86]</td>
+                <td style="text-align:right">312.50 ns</td>
+                <td style="text-align:right">4.621 ns</td>
+                <td style="text-align:right">2.052 ns</td>
+                <td style="text-align:right">-</td>
+                <td style="text-align:right">-</td>
+            </tr>
+            <tr>
+                <td>DefaultConverter_ClassUnion_Read</td>
+                <td>Case4(...):00 } [86]</td>
+                <td style="text-align:right">695.45 ns</td>
+                <td style="text-align:right">23.740 ns</td>
+                <td style="text-align:right">12.417 ns</td>
+                <td style="text-align:right">0.0191</td>
+                <td style="text-align:right">160 B</td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_ClassUnion_Read</td>
+                <td>Case4(...):00 } [86]</td>
+                <td style="text-align:right">620.00 ns</td>
+                <td style="text-align:right">13.440 ns</td>
+                <td style="text-align:right">5.967 ns</td>
+                <td style="text-align:right">0.0114</td>
+                <td style="text-align:right">96 B</td>
+            </tr>
+        </tbody>
+    </table>
+    <h4 id="struct-union">Struct union</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>StructUnion</th>
+                <th style="text-align:right">Mean</th>
+                <th style="text-align:right">Error</th>
+                <th style="text-align:right">StdDev</th>
+                <th style="text-align:right">Gen0</th>
+                <th style="text-align:right">Allocated</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>DefaultConverter_StructUnion_Write</strong></td>
+                <td><strong>Case1</strong></td>
+                <td style="text-align:right"><strong>55.55 ns</strong></td>
+                <td style="text-align:right"><strong>2.735 ns</strong></td>
+                <td style="text-align:right"><strong>1.431 ns</strong></td>
+                <td style="text-align:right"><strong>0.0134</strong></td>
+                <td style="text-align:right"><strong>112 B</strong></td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_StructUnion_Write</td>
+                <td>Case1</td>
+                <td style="text-align:right">24.13 ns</td>
+                <td style="text-align:right">0.549 ns</td>
+                <td style="text-align:right">0.287 ns</td>
+                <td style="text-align:right">-</td>
+                <td style="text-align:right">-</td>
+            </tr>
+            <tr>
+                <td>DefaultConverter_StructUnion_Read</td>
+                <td>Case1</td>
+                <td style="text-align:right">59.09 ns</td>
+                <td style="text-align:right">1.132 ns</td>
+                <td style="text-align:right">0.175 ns</td>
+                <td style="text-align:right">0.0134</td>
+                <td style="text-align:right">112 B</td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_StructUnion_Read</td>
+                <td>Case1</td>
+                <td style="text-align:right">39.33 ns</td>
+                <td style="text-align:right">0.674 ns</td>
+                <td style="text-align:right">0.240 ns</td>
+                <td style="text-align:right">-</td>
+                <td style="text-align:right">-</td>
+            </tr>
+            <tr>
+                <td><strong>DefaultConverter_StructUnion_Write</strong></td>
+                <td><strong>Case4(...):00 } [86]</strong></td>
+                <td style="text-align:right"><strong>347.04 ns</strong></td>
+                <td style="text-align:right"><strong>5.616 ns</strong></td>
+                <td style="text-align:right"><strong>0.869 ns</strong></td>
+                <td style="text-align:right"><strong>0.0134</strong></td>
+                <td style="text-align:right"><strong>112 B</strong></td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_StructUnion_Write</td>
+                <td>Case4(...):00 } [86]</td>
+                <td style="text-align:right">307.65 ns</td>
+                <td style="text-align:right">5.607 ns</td>
+                <td style="text-align:right">2.000 ns</td>
+                <td style="text-align:right">-</td>
+                <td style="text-align:right">-</td>
+            </tr>
+            <tr>
+                <td>DefaultConverter_StructUnion_Read</td>
+                <td>Case4(...):00 } [86]</td>
+                <td style="text-align:right">649.65 ns</td>
+                <td style="text-align:right">8.134 ns</td>
+                <td style="text-align:right">1.259 ns</td>
+                <td style="text-align:right">0.0191</td>
+                <td style="text-align:right">160 B</td>
+            </tr>
+            <tr>
+                <td>SpecializedConverter_StructUnion_Read</td>
+                <td>Case4(...):00 } [86]</td>
+                <td style="text-align:right">610.82 ns</td>
+                <td style="text-align:right">4.753 ns</td>
+                <td style="text-align:right">0.736 ns</td>
+                <td style="text-align:right">0.0057</td>
+                <td style="text-align:right">48 B</td>
+            </tr>
+        </tbody>
+    </table>
     <h2 id="upcoming-features">Upcoming Features</h2>
     <ul>
-        <li><strong>JSON serialization/deserialization</strong>: Support for JSON (de)serialization via
-            System.Text.Json.
-        </li>
+        <li>Unsafe features support (type pointers, method pointers).</li>
     </ul>
     <h2 id="license">License</h2>
     <p>This project is licensed under the MIT License - see the LICENSE file for details.</p>
