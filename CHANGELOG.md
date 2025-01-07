@@ -1,3 +1,9 @@
+0.6.0
+------
+
+- Add JSON serialization/deserialization support.
+- Add generation of `Is{CaseName}` property and `TryGet{CaseName}Data` method.
+
 0.5.3
 ------
 
