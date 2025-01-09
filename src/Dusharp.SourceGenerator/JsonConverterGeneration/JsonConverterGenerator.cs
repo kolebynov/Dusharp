@@ -49,6 +49,15 @@ public sealed class JsonConverterGenerator
 					[
 						new MethodDefinition
 						{
+							Name = "CanConvert",
+							ReturnType = TypeNames.Boolean,
+							Accessibility = Accessibility.Public,
+							MethodModifier = MethodModifier.Override(),
+							Parameters = [new MethodParameter(TypeNames.Type(), "typeToConvert")],
+							BodyWriter = GetCanConvertMethodBodyWriter(union),
+						},
+						new MethodDefinition
+						{
 							Name = "Read",
 							ReturnType = new TypeName(union.TypeInfo, true),
 							Accessibility = Accessibility.Public,
@@ -113,6 +122,17 @@ public sealed class JsonConverterGenerator
 			.SelectMany(unionCase => unionCase.Parameters
 				.Select(p => GetEncodedValueField(GetUnionCaseParameterEncodedValueFieldName(unionCase.Name, p.Name), p.Name))
 				.Prepend(GetEncodedValueField(GetUnionCaseEncodedValueFieldName(unionCase.Name), unionCase.Name)));
+
+	private static Action<MethodDefinition, CodeWriter> GetCanConvertMethodBodyWriter(UnionInfo union) =>
+		(def, methodBodyBlock) =>
+		{
+			var typeToConvertParameter = def.Parameters[0].Name;
+			methodBodyBlock
+				.Append($"return {typeToConvertParameter} == {UnionTypeFieldName}")
+				.AppendLine(union.TypeInfo.Kind.IsReferenceType
+					? $" || {typeToConvertParameter}.BaseType == {UnionTypeFieldName};"
+					: ";");
+		};
 
 	private static Action<MethodDefinition, CodeWriter> GetReadMethodBodyWriter() =>
 		(def, methodBodyBlock) =>

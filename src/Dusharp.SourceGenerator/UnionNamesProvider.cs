@@ -1,4 +1,4 @@
-namespace Dusharp.SourceGenerator.Common;
+namespace Dusharp;
 
 internal static class UnionNamesProvider
 {

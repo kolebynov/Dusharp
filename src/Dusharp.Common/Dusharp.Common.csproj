@@ -14,7 +14,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Dusharp.SourceGenerator.Common\Dusharp.SourceGenerator.Common.csproj"/>
+		<Compile Include="..\Dusharp.SourceGenerator\UnionNamesProvider.cs">
+			<Link>UnionNamesProvider.cs</Link>
+		</Compile>
 	</ItemGroup>
 
 </Project>

@@ -3,7 +3,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Dusharp.SourceGenerator.Common;
 
 namespace Dusharp.Json;
 
@@ -16,6 +15,11 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		if (!typeof(IUnion).IsAssignableFrom(typeToConvert))
 		{
 			return false;
+		}
+
+		if (_converters.ContainsKey(typeToConvert))
+		{
+			return true;
 		}
 
 		var hasUnionAttribute = typeToConvert.GetCustomAttribute<UnionAttribute>(false) != null;
