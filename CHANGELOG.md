@@ -1,3 +1,8 @@
+0.6.1
+------
+
+- Add generation of `CanConvert` method for source-generated JSON converters.
+
 0.6.0
 ------
 
