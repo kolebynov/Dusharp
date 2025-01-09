@@ -1,6 +1,5 @@
 using Dusharp.CodeAnalyzing;
 using Dusharp.CodeGeneration;
-using Dusharp.SourceGenerator.Common;
 using Microsoft.CodeAnalysis;
 using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
 using TypeName = Dusharp.CodeAnalyzing.TypeName;
