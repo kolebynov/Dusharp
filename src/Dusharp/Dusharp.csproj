@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<Version>0.6.1</Version>
+		<Version>0.6.2</Version>
 		<Authors>Vitali Kolebyanov</Authors>
 		<Description>Dusharp is a C# source generator for creating discriminated unions.</Description>
 		<RepositoryUrl>https://github.com/kolebynov/Dusharp</RepositoryUrl>
@@ -31,6 +31,7 @@
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false"/>
 		<None Include="$(OutputPath)\Dusharp.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+		<None Include="$(OutputPath)\Dusharp.Common.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
 		<None Include="$(OutputPath)\Dusharp.Common.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false"/>
 	</ItemGroup>
 

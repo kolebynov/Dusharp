@@ -1,3 +1,8 @@
+0.6.2
+------
+
+- Fix possible error `Could not load file or assembly 'Dusharp.Common'`.
+
 0.6.1
 ------
 
