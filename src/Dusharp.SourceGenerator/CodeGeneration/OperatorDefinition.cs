@@ -1,6 +1,6 @@
-using Dusharp.CodeAnalyzing;
+using Dusharp.SourceGenerator.CodeAnalyzing;
 
-namespace Dusharp.CodeGeneration;
+namespace Dusharp.SourceGenerator.CodeGeneration;
 
 public sealed class OperatorDefinition
 {

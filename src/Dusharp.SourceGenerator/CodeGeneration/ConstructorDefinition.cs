@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace Dusharp.CodeGeneration;
+namespace Dusharp.SourceGenerator.CodeGeneration;
 
 public sealed class ConstructorDefinition
 {

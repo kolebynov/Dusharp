@@ -1,4 +1,4 @@
-namespace Dusharp.Extensions;
+namespace Dusharp.SourceGenerator.Extensions;
 
 public static class CollectionExtensions
 {

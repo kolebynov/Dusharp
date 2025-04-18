@@ -1,7 +1,7 @@
 ﻿using System.Text;
-using Dusharp.Extensions;
+using Dusharp.SourceGenerator.Extensions;
 
-namespace Dusharp;
+namespace Dusharp.SourceGenerator;
 
 public sealed class CodeWriter : IDisposable
 {

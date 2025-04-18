@@ -1,7 +1,7 @@
-using Dusharp.CodeAnalyzing;
-using Dusharp.CodeGeneration;
+using Dusharp.SourceGenerator.CodeAnalyzing;
+using Dusharp.SourceGenerator.CodeGeneration;
 
-namespace Dusharp.UnionGeneration;
+namespace Dusharp.SourceGenerator.UnionGeneration;
 
 public interface IUnionDefinitionGenerator
 {

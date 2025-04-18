@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 
-namespace Dusharp;
+namespace Dusharp.SourceGenerator;
 
 internal static class RoslynExtensions
 {

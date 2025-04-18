@@ -1,7 +1,7 @@
-using Dusharp.CodeAnalyzing;
+using Dusharp.SourceGenerator.CodeAnalyzing;
 using Microsoft.CodeAnalysis;
 
-namespace Dusharp.CodeGeneration;
+namespace Dusharp.SourceGenerator.CodeGeneration;
 
 public sealed partial class PropertyDefinition
 {

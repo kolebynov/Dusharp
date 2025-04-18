@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace Dusharp.CodeAnalyzing;
+namespace Dusharp.SourceGenerator.CodeAnalyzing;
 
 public static class UnionInfoCollector
 {

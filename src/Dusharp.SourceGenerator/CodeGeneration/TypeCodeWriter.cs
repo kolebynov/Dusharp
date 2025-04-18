@@ -1,4 +1,4 @@
-namespace Dusharp.CodeGeneration;
+namespace Dusharp.SourceGenerator.CodeGeneration;
 
 public sealed class TypeCodeWriter
 {
@@ -180,10 +180,9 @@ public sealed class TypeCodeWriter
 	private static void WriteMethodDeclaration(MethodDefinition methodDefinition, CodeWriter typeBodyBlock)
 	{
 		var declarationStr = new DeclarationBuilder()
-			.AddIf(methodDefinition.Accessibility != null, () => methodDefinition.Accessibility!.Value.ToCodeString())
-			.AddIf(
+			.AddIf(methodDefinition.Accessibility != null, () => methodDefinition.Accessibility!.Value.ToCodeString()).AddIf(
 				methodDefinition.MethodModifier != null,
-				() => methodDefinition.MethodModifier!.Match(() => "static", () => "abstract", () => "virtual", () => "override"))
+				(Func<string>)(() => methodDefinition.MethodModifier!.Match(() => "static", () => "abstract", () => "virtual", () => "override")))
 			.AddIf(methodDefinition.IsPartial, () => "partial")
 			.Add(methodDefinition.ReturnType.FullyQualifiedName)
 			.Add(methodDefinition.Name)

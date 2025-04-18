@@ -1,4 +1,4 @@
-namespace Dusharp.CodeAnalyzing;
+namespace Dusharp.SourceGenerator.CodeAnalyzing;
 
 public sealed partial class TypeInfo : IEquatable<TypeInfo>
 {

@@ -1,4 +1,4 @@
-namespace Dusharp.CodeGeneration;
+namespace Dusharp.SourceGenerator.CodeGeneration;
 
 [Union]
 public partial class TypeKind

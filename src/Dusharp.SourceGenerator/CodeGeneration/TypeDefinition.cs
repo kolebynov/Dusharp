@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
-using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
+using TypeInfo = Dusharp.SourceGenerator.CodeAnalyzing.TypeInfo;
 
-namespace Dusharp.CodeGeneration;
+namespace Dusharp.SourceGenerator.CodeGeneration;
 
 public sealed record class TypeDefinition
 {

@@ -1,10 +1,10 @@
 using System.Text;
-using Dusharp.CodeAnalyzing;
-using Dusharp.CodeGeneration;
+using Dusharp.SourceGenerator.CodeAnalyzing;
+using Dusharp.SourceGenerator.CodeGeneration;
 using Microsoft.CodeAnalysis;
-using TypeKind = Dusharp.CodeGeneration.TypeKind;
+using TypeKind = Dusharp.SourceGenerator.CodeGeneration.TypeKind;
 
-namespace Dusharp.JsonConverterGeneration;
+namespace Dusharp.SourceGenerator.JsonConverterGeneration;
 
 public sealed class JsonConverterGenerator
 {

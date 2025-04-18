@@ -1,6 +1,6 @@
-using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
+using TypeInfo = Dusharp.SourceGenerator.CodeAnalyzing.TypeInfo;
 
-namespace Dusharp;
+namespace Dusharp.SourceGenerator;
 
 public static class CodeWritingUtils
 {

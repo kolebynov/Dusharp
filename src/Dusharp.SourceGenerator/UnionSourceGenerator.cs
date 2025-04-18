@@ -1,11 +1,11 @@
-﻿using Dusharp.CodeAnalyzing;
-using Dusharp.CodeGeneration;
-using Dusharp.JsonConverterGeneration;
-using Dusharp.UnionGeneration;
+﻿using Dusharp.SourceGenerator.CodeAnalyzing;
+using Dusharp.SourceGenerator.CodeGeneration;
+using Dusharp.SourceGenerator.JsonConverterGeneration;
+using Dusharp.SourceGenerator.UnionGeneration;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Dusharp;
+namespace Dusharp.SourceGenerator;
 
 [Generator]
 public sealed class UnionSourceGenerator : IIncrementalGenerator

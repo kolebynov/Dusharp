@@ -1,4 +1,4 @@
-namespace Dusharp.CodeAnalyzing;
+namespace Dusharp.SourceGenerator.CodeAnalyzing;
 
 public sealed class UnionCaseInfo
 {

@@ -1,11 +1,11 @@
-using Dusharp.CodeAnalyzing;
-using Dusharp.CodeGeneration;
-using Dusharp.Extensions;
+using Dusharp.SourceGenerator.CodeAnalyzing;
+using Dusharp.SourceGenerator.CodeGeneration;
+using Dusharp.SourceGenerator.Extensions;
 using Microsoft.CodeAnalysis;
-using TypeInfo = Dusharp.CodeAnalyzing.TypeInfo;
-using TypeKind = Dusharp.CodeGeneration.TypeKind;
+using TypeInfo = Dusharp.SourceGenerator.CodeAnalyzing.TypeInfo;
+using TypeKind = Dusharp.SourceGenerator.CodeGeneration.TypeKind;
 
-namespace Dusharp.UnionGeneration;
+namespace Dusharp.SourceGenerator.UnionGeneration;
 
 public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 {

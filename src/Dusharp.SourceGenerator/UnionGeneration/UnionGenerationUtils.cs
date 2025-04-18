@@ -1,7 +1,7 @@
 using System.Globalization;
-using Dusharp.CodeAnalyzing;
+using Dusharp.SourceGenerator.CodeAnalyzing;
 
-namespace Dusharp.UnionGeneration;
+namespace Dusharp.SourceGenerator.UnionGeneration;
 
 public static class UnionGenerationUtils
 {
