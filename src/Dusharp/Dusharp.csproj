@@ -3,7 +3,6 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<Version>0.6.2</Version>
 		<Authors>Vitali Kolebyanov</Authors>
 		<Description>Dusharp is a C# source generator for creating discriminated unions.</Description>
 		<RepositoryUrl>https://github.com/kolebynov/Dusharp</RepositoryUrl>
@@ -16,16 +15,12 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
-		<DevelopmentDependency>true</DevelopmentDependency>
+		<DevelopmentDependency>false</DevelopmentDependency>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Dusharp.SourceGenerator\Dusharp.SourceGenerator.csproj" PrivateAssets="all"/>
 		<ProjectReference Include="..\Dusharp.Common\Dusharp.Common.csproj" PrivateAssets="all"/>
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
 	</ItemGroup>
 
 	<ItemGroup>

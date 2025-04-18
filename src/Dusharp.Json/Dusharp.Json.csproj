@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<Authors>Vitali Kolebyanov</Authors>
+		<Description>System.Text.Json support for Dusharp.</Description>
+		<RepositoryUrl>https://github.com/kolebynov/Dusharp</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/kolebynov/Dusharp</PackageProjectUrl>
+		<PackageTags>DU;SourceGenerator;Discriminated unions;json</PackageTags>
+		<IsPackable>True</IsPackable>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryType>git</RepositoryType>
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<DevelopmentDependency>false</DevelopmentDependency>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Dusharp.Json.Common\Dusharp.Json.Common.csproj" PrivateAssets="all"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
+		<PackageReference Include="Dusharp" Version="$(Version)" PrivateAssets="build;contentfiles"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false"/>
+		<None Include="$(OutputPath)\Dusharp.Json.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
+		<None Include="$(OutputPath)\Dusharp.Json.Common.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false"/>
+	</ItemGroup>
+
+</Project>
