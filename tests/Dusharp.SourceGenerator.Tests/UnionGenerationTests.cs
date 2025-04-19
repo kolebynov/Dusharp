@@ -29,7 +29,7 @@ public class UnionGenerationTests
 				AdditionalReferences = { typeof(UnionAttribute).Assembly },
 				GeneratedSources =
 				{
-					($"Dusharp.SourceGenerator/Dusharp.UnionSourceGenerator/{typeFullName}.Dusharp.g.cs", SourceText.From(File.ReadAllText(Path.Combine("TestData", $"{fileName}.Generated.cs")), Encoding.UTF8)),
+					($"Dusharp.SourceGenerator/Dusharp.SourceGenerator.UnionSourceGenerator/{typeFullName}.Dusharp.Union.g.cs", SourceText.From(File.ReadAllText(Path.Combine("TestData", $"{fileName}.Generated.cs")), Encoding.UTF8)),
 				},
 			},
 		};

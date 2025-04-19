@@ -2,11 +2,16 @@
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
-		<RootNamespace>Dusharp</RootNamespace>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
+		<ProjectReference Include="..\Dusharp.Common\Dusharp.Common.csproj"/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Dusharp" Version="0.6.2" PrivateAssets="all" ExcludeAssets="compile"/>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" PrivateAssets="all"/>
 		<PackageReference Include="PolySharp" Version="1.15.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -12,17 +12,20 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
-		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<DevelopmentDependency>false</DevelopmentDependency>
+		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Dusharp.Json.Common\Dusharp.Json.Common.csproj" PrivateAssets="all"/>
+		<ProjectReference Include="..\Dusharp.SourceGenerator.Common\Dusharp.SourceGenerator.Common.csproj" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
 		<PackageReference Include="Dusharp" Version="$(Version)" PrivateAssets="build;contentfiles"/>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<ItemGroup>

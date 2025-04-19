@@ -7,11 +7,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="BenchmarkDotNet" Version="0.14.0"/>
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\..\src\Dusharp.Common\Dusharp.Common.csproj" />
-		<ProjectReference Include="..\..\src\Dusharp.SourceGenerator\Dusharp.SourceGenerator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer"/>
+		<PackageReference Include="Dusharp.Json" Version="$(Version)"/>
 	</ItemGroup>
 
 </Project>

@@ -9,4 +9,8 @@
 		<ProjectReference Include="..\Dusharp.Common\Dusharp.Common.csproj"/>
 	</ItemGroup>
 
+	<ItemGroup>
+		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
+	</ItemGroup>
+
 </Project>
