@@ -12,7 +12,7 @@
 - ✅ **Generics**: Generics support for union types.
 - ✅ **Pretty print**: Using overloaded `ToString()`.
 - ✅ **Struct unions**: With efficient memory layout for unions as structs.
-- ✅ **JSON serialization/deserialization**: Support for unions with `System.Text.Json`.
+- ✅ **JSON serialization/deserialization**: Support for unions for `System.Text.Json` and `Newtonsoft.Json`.
 
 ## Installation
 
@@ -20,6 +20,18 @@ Dusharp is available as a NuGet package. You can install it using the NuGet pack
 
 ```bash
 dotnet add package Dusharp
+```
+
+For `System.Text.Json` support install `Dusharp.Json` package:
+
+```bash
+dotnet add package Dusharp.Json
+```
+
+For `Newtonsoft.Json` support install `Dusharp.Newtonsoft` package:
+
+```bash
+dotnet add package Dusharp.Newtonsoft
 ```
 
 ## Usage
@@ -181,15 +193,20 @@ Thus, the total size is `16 + 32 + 8 = 56 bytes`.
 All of these details about memory layout and struct size are implementation-specific and subject to change. Users should not rely on these internal details or use them directly in their code. The behavior and memory management may evolve in future versions to improve performance or efficiency.
 
 ## Unions serialization/deserialization
-`Dusharp` supports serialization and deserialization of unions using either a default union JSON converter or a source-generated JSON converter specific to the union type.
+`Dusharp` supports `System.Text.Json` (`Dusharp.Json` package) and `Newtonsoft.Json` (`Dusharp.Newtonsoft` package) serialization and deserialization of unions.
 
-To generate a specific JSON converter, the union type must be marked with the `[Dusharp.Json.GenerateJsonConverterAttribute]` attribute.
-The source-generated converter is slightly faster and avoids boxing/unboxing struct unions during serialization and deserialization.
 - **Parameterless Union Cases:** Serialized as a string containing only the case name.
 - **Union Cases with Parameters:** Serialized as an object where the case name is the key, followed by an object containing the case parameters.
 
+### System.Text.Json
+`Dusharp` supports serialization and deserialization using either a default union JSON converter or a source-generated JSON converter specific to the union type.
+
+To generate a specific JSON converter, the union type must be marked with the `[Dusharp.Json.GenerateJsonConverterAttribute]` attribute.
+The source-generated converter is slightly faster and avoids boxing/unboxing struct unions during serialization and deserialization.
+
 ```csharp
 using System.Text.Json;
+using Dusharp.Json;
 
 Shape<double> shape1 = Shape<double>.Point();
 Shape<double> shape2 = Shape<double>.Circle(5.0);
@@ -217,7 +234,7 @@ Shape<double> deserializedShape = JsonSerializer.Deserialize<Shape<double>>(seri
 Console.WriteLine(deserializedShape.IsRectangle); // True
 ```
 
-### Json converters benchmark results
+### System.Text.Json converters benchmark results
 
 ```
 
@@ -257,6 +274,35 @@ MaxWarmupIterationCount=7  MinIterationCount=2  MinWarmupIterationCount=2
 | SpecializedConverter_StructUnion_Write | Case4(...):00 } [86]     |     307.65 ns |     5.607 ns |     2.000 ns |          - |         - |
 | DefaultConverter_StructUnion_Read      | Case4(...):00 } [86]     |     649.65 ns |     8.134 ns |     1.259 ns |     0.0191 |     160 B |
 | SpecializedConverter_StructUnion_Read  | Case4(...):00 } [86]     |     610.82 ns |     4.753 ns |     0.736 ns |     0.0057 |      48 B |
+
+### Newtonsoft.Json
+`Dusharp` supports serialization and deserialization using only a default generic union JSON converter.
+
+```csharp
+using Dusharp.Newtonsoft;
+using Newtonsoft.Json;
+
+Shape<double> shape1 = Shape<double>.Point();
+Shape<double> shape2 = Shape<double>.Circle(5.0);
+Shape<double> shape3 = Shape<double>.Rectangle(2.0, 2.0);
+
+JsonSerializerSettings options = new JsonSerializerSettings
+{
+    Converters =
+    {
+        new DefaultUnionJsonConverter(),
+    },
+};
+
+string serializedShape3 = JsonConvert.SerializeObject(shape3, options);
+
+Console.WriteLine(JsonConvert.SerializeObject(shape1, options)); // "Point"
+Console.WriteLine(JsonConvert.SerializeObject(shape2, options)); // {"Circle":{"radius": 5.0}}
+Console.WriteLine(serializedShape3); // {"Rectangle":{"width": 2.0,"height": 2.0}}
+
+Shape<double> deserializedShape = JsonConvert.DeserializeObject<Shape<double>>(serializedShape3, options);
+Console.WriteLine(deserializedShape.IsRectangle); // True
+```
 
 ## Upcoming Features
 - Unsafe features support (type pointers, method pointers).

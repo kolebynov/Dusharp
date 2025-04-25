@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using Dusharp.Json;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
-using JsonException = System.Text.Json.JsonException;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Dusharp.Tests.Json
