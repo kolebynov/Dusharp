@@ -4,35 +4,27 @@
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<Authors>Vitali Kolebyanov</Authors>
-		<Description>System.Text.Json support for Dusharp.</Description>
+		<Description>Newtonsoft.Json support for Dusharp.</Description>
 		<RepositoryUrl>https://github.com/kolebynov/Dusharp</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/kolebynov/Dusharp</PackageProjectUrl>
-		<PackageTags>DU;SourceGenerator;Discriminated unions;json</PackageTags>
+		<PackageTags>DU;SourceGenerator;Discriminated unions;json;Newtonsoft</PackageTags>
 		<IsPackable>True</IsPackable>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
-		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<IncludeBuildOutput>true</IncludeBuildOutput>
 		<DevelopmentDependency>false</DevelopmentDependency>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Dusharp.Json.Common\Dusharp.Json.Common.csproj" PrivateAssets="all"/>
-		<ProjectReference Include="..\Dusharp.SourceGenerator.Common\Dusharp.SourceGenerator.Common.csproj" PrivateAssets="all"/>
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
+		<PackageReference Include="Newtonsoft.Json" Version="[11.0.1,)"/>
 		<PackageReference Include="Dusharp" Version="$(Version)" PrivateAssets="build;contentfiles"/>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" PrivateAssets="all"/>
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\..\README.md" Pack="true" PackagePath="" Visible="false"/>
-		<None Include="$(OutputPath)\Dusharp.Json.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
-		<None Include="$(OutputPath)\Dusharp.Json.Common.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
-		<None Include="$(OutputPath)\Dusharp.Json.Common.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false"/>
 	</ItemGroup>
 
 </Project>

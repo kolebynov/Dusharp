@@ -1,30 +1,48 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Dusharp.Json;
 using FluentAssertions;
+using Newtonsoft.Json;
 using Xunit;
+using JsonException = System.Text.Json.JsonException;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Dusharp.Tests.Json
 {
 	public class JsonConvertersTests
 	{
-		private readonly JsonSerializerOptions _defaultConverterSerializerOptions = new()
+		private static readonly JsonSerializerOptions DefaultConverterSerializerOptions = new()
 		{
 			Converters = { new DefaultUnionJsonConverter() },
 		};
 
-		private readonly JsonSerializerOptions _classConverterSerializerOptions = new()
+		private static readonly JsonSerializerOptions ClassConverterSerializerOptions = new()
 		{
 			Converters = { new TestUnion<int>.JsonConverter() },
 		};
 
-		private readonly JsonSerializerOptions _structConverterSerializerOptions = new()
+		private static readonly JsonSerializerOptions StructConverterSerializerOptions = new()
 		{
 			Converters = { new TestStructUnion<int>.JsonConverter() },
 		};
 
-		[Fact]
-		public void Write_ForDefaultStructValue_ThrowException()
+		private static readonly JsonSerializerSettings NewtonsoftDefaultConverterSerializerSettings = new()
+		{
+			Converters = { new Newtonsoft.DefaultUnionJsonConverter() },
+		};
+
+		public static IEnumerable<object[]> Write_ForDefaultStructValue_Data => new[]
+		{
+			new Func<TestStructUnion<int>, string>[] { union => JsonSerializer.Serialize(union, DefaultConverterSerializerOptions) },
+			new Func<TestStructUnion<int>, string>[] { union => JsonSerializer.Serialize(union, StructConverterSerializerOptions) },
+			new Func<TestStructUnion<int>, string>[] { union => JsonConvert.SerializeObject(union, NewtonsoftDefaultConverterSerializerSettings) },
+		};
+
+		[Theory]
+		[MemberData(nameof(Write_ForDefaultStructValue_Data))]
+		public void Write_ForDefaultStructValue_ThrowException(Func<TestStructUnion<int>, string> serializeFunc)
 		{
 			// Arrange
 
@@ -33,270 +51,274 @@ namespace Dusharp.Tests.Json
 
 			// Act and Assert
 
-			FluentActions.Invoking(() => JsonSerializer.Serialize(default(TestStructUnion<int>), _defaultConverterSerializerOptions))
-				.Should().Throw<ArgumentException>().WithMessage(errorMessage);
-			FluentActions.Invoking(() => JsonSerializer.Serialize(default(TestStructUnion<int>), _structConverterSerializerOptions))
-				.Should().Throw<ArgumentException>().WithMessage(errorMessage);
+			FluentActions.Invoking(() => serializeFunc(default)).Should().Throw<ArgumentException>()
+				.WithMessage(errorMessage);
 		}
 
-		[Fact]
-		public void Write_ForParameterlessUnion_WriteOnlyCaseName()
+		public static IEnumerable<object[]> UnionSerializers => new[]
+		{
+			new object[]
+			{
+				new Func<TestUnion<int>, string>(u => JsonSerializer.Serialize(u, DefaultConverterSerializerOptions)),
+				new Func<TestStructUnion<int>, string>(u =>
+					JsonSerializer.Serialize(u, DefaultConverterSerializerOptions)),
+			},
+			new object[]
+			{
+				new Func<TestUnion<int>, string>(u => JsonSerializer.Serialize(u, ClassConverterSerializerOptions)),
+				new Func<TestStructUnion<int>, string>(u =>
+					JsonSerializer.Serialize(u, StructConverterSerializerOptions)),
+			},
+			new object[]
+			{
+				new Func<TestUnion<int>, string>(u =>
+					JsonConvert.SerializeObject(u, NewtonsoftDefaultConverterSerializerSettings)),
+				new Func<TestStructUnion<int>, string>(u =>
+					JsonConvert.SerializeObject(u, NewtonsoftDefaultConverterSerializerSettings)),
+			},
+		};
+
+		[Theory]
+		[MemberData(nameof(UnionSerializers))]
+		public void Write_ForParameterlessUnion_WriteOnlyCaseName(
+			Func<TestUnion<int>, string> classUnionSerializeFunc,
+			Func<TestStructUnion<int>, string> structUnionSerializeFunc)
 		{
 			// Act
 
-			var resultJson1 = JsonSerializer.Serialize(TestUnion<int>.Case1(), _defaultConverterSerializerOptions);
-			var resultJson2 = JsonSerializer.Serialize(TestStructUnion<int>.Case1(), _defaultConverterSerializerOptions);
-			var resultJson3 = JsonSerializer.Serialize(TestUnion<int>.Case1(), _classConverterSerializerOptions);
-			var resultJson4 = JsonSerializer.Serialize(TestStructUnion<int>.Case1(), _structConverterSerializerOptions);
+			var classUnionJson = classUnionSerializeFunc(TestUnion<int>.Case1());
+			var structUnionJson = structUnionSerializeFunc(TestStructUnion<int>.Case1());
 
 			// Assert
 
-			resultJson1.Should().Be("\"Case1\"");
-			resultJson2.Should().Be("\"Case1\"");
-			resultJson3.Should().Be("\"Case1\"");
-			resultJson4.Should().Be("\"Case1\"");
+			classUnionJson.Should().Be("\"Case1\"");
+			structUnionJson.Should().Be("\"Case1\"");
 		}
 
-		[Fact]
-		public void Write_ForUnionWithOneParameter_WriteObjectWithCaseNameAndObjectWithParameterValue()
+		[Theory]
+		[MemberData(nameof(UnionSerializers))]
+		public void Write_ForUnionWithOneParameter_WriteObjectWithCaseNameAndObjectWithParameterValue(
+			Func<TestUnion<int>, string> classUnionSerializeFunc,
+			Func<TestStructUnion<int>, string> structUnionSerializeFunc)
 		{
 			// Act
 
-			var resultJson1 = JsonSerializer.Serialize(TestUnion<int>.Case3("test"), _defaultConverterSerializerOptions);
-			var resultJson2 = JsonSerializer.Serialize(TestStructUnion<int>.Case3("test"), _defaultConverterSerializerOptions);
-			var resultJson3 = JsonSerializer.Serialize(TestUnion<int>.Case3("test"), _classConverterSerializerOptions);
-			var resultJson4 = JsonSerializer.Serialize(TestStructUnion<int>.Case3("test"), _structConverterSerializerOptions);
+			var classUnionJson = classUnionSerializeFunc(TestUnion<int>.Case3("test"));
+			var structUnionJson = structUnionSerializeFunc(TestStructUnion<int>.Case3("test"));
 
 			// Assert
 
-			resultJson1.Should().Be("{\"Case3\":{\"value\":\"test\"}}");
-			resultJson2.Should().Be("{\"Case3\":{\"value\":\"test\"}}");
-			resultJson3.Should().Be("{\"Case3\":{\"value\":\"test\"}}");
-			resultJson4.Should().Be("{\"Case3\":{\"value\":\"test\"}}");
+			classUnionJson.Should().Be("{\"Case3\":{\"value\":\"test\"}}");
+			structUnionJson.Should().Be("{\"Case3\":{\"value\":\"test\"}}");
 		}
 
-		[Fact]
-		public void Write_ForUnionWithMultipleParameters_WriteObjectWithCaseNameAndObjectWithParameterValues()
+		[Theory]
+		[MemberData(nameof(UnionSerializers))]
+		public void Write_ForUnionWithMultipleParameters_WriteObjectWithCaseNameAndObjectWithParameterValues(
+			Func<TestUnion<int>, string> classUnionSerializeFunc,
+			Func<TestStructUnion<int>, string> structUnionSerializeFunc)
 		{
 			// Act
 
-			var resultJson1 = JsonSerializer.Serialize(TestUnion<int>.Case2("test", 2), _defaultConverterSerializerOptions);
-			var resultJson2 = JsonSerializer.Serialize(TestStructUnion<int>.Case2("test", 2), _defaultConverterSerializerOptions);
-			var resultJson3 = JsonSerializer.Serialize(TestUnion<int>.Case2("test", 2), _classConverterSerializerOptions);
-			var resultJson4 = JsonSerializer.Serialize(TestStructUnion<int>.Case2("test", 2), _structConverterSerializerOptions);
+			var classUnionJson = classUnionSerializeFunc(TestUnion<int>.Case2("test", 2));
+			var structUnionJson = structUnionSerializeFunc(TestStructUnion<int>.Case2("test", 2));
 
 			// Assert
 
-			resultJson1.Should().Be("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
-			resultJson2.Should().Be("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
-			resultJson3.Should().Be("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
-			resultJson4.Should().Be("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
+			classUnionJson.Should().Be("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
+			structUnionJson.Should().Be("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
 		}
 
-		[Fact]
-		public void Read_ForParameterlessUnion_ReadCorrectly()
+		public static IEnumerable<object[]> UnionDeserializers => new[]
+		{
+			new object[]
+			{
+				new Func<string, TestUnion<int>>(str => JsonSerializer.Deserialize<TestUnion<int>>(str, DefaultConverterSerializerOptions)!),
+				new Func<string, TestStructUnion<int>>(str => JsonSerializer.Deserialize<TestStructUnion<int>>(str, DefaultConverterSerializerOptions)),
+			},
+			new object[]
+			{
+				new Func<string, TestUnion<int>>(str => JsonSerializer.Deserialize<TestUnion<int>>(str, ClassConverterSerializerOptions)!),
+				new Func<string, TestStructUnion<int>>(str => JsonSerializer.Deserialize<TestStructUnion<int>>(str, StructConverterSerializerOptions)),
+			},
+			new object[]
+			{
+				new Func<string, TestUnion<int>>(str => JsonConvert.DeserializeObject<TestUnion<int>>(str, NewtonsoftDefaultConverterSerializerSettings)!),
+				new Func<string, TestStructUnion<int>>(str => JsonConvert.DeserializeObject<TestStructUnion<int>>(str, NewtonsoftDefaultConverterSerializerSettings)),
+			},
+		};
+
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForParameterlessUnion_ReadCorrectly(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act
 
-			var result1 = JsonSerializer.Deserialize<TestUnion<int>>("\"Case1\"", _defaultConverterSerializerOptions);
-			var result2 = JsonSerializer.Deserialize<TestStructUnion<int>>("\"Case1\"", _defaultConverterSerializerOptions);
-			var result3 = JsonSerializer.Deserialize<TestUnion<int>>("\"Case1\"", _classConverterSerializerOptions);
-			var result4 = JsonSerializer.Deserialize<TestStructUnion<int>>("\"Case1\"", _structConverterSerializerOptions);
+			var classUnion = classUnionDeserializeFunc("\"Case1\"");
+			var structUnion = structUnionDeserializeFunc("\"Case1\"");
 
 			// Assert
 
-			result1.Should().Be(TestUnion<int>.Case1());
-			result2.Should().Be(TestStructUnion<int>.Case1());
-			result3.Should().Be(TestUnion<int>.Case1());
-			result4.Should().Be(TestStructUnion<int>.Case1());
+			classUnion.Should().Be(TestUnion<int>.Case1());
+			structUnion.Should().Be(TestStructUnion<int>.Case1());
 		}
 
-		[Fact]
-		public void Read_ForUnionWithOneParameter_ReadCorrectly()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForUnionWithOneParameter_ReadCorrectly(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act
 
-			var result1 = JsonSerializer.Deserialize<TestUnion<int>>("{\"Case3\":{\"value\":\"test\"}}", _defaultConverterSerializerOptions);
-			var result2 = JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case3\":{\"value\":\"test\"}}", _defaultConverterSerializerOptions);
-			var result3 = JsonSerializer.Deserialize<TestUnion<int>>("{\"Case3\":{\"value\":\"test\"}}", _classConverterSerializerOptions);
-			var result4 = JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case3\":{\"value\":\"test\"}}", _structConverterSerializerOptions);
+			var classUnion = classUnionDeserializeFunc("{\"Case3\":{\"value\":\"test\"}}");
+			var structUnion = structUnionDeserializeFunc("{\"Case3\":{\"value\":\"test\"}}");
 
 			// Assert
 
-			result1.Should().Be(TestUnion<int>.Case3("test"));
-			result2.Should().Be(TestStructUnion<int>.Case3("test"));
-			result3.Should().Be(TestUnion<int>.Case3("test"));
-			result4.Should().Be(TestStructUnion<int>.Case3("test"));
+			classUnion.Should().Be(TestUnion<int>.Case3("test"));
+			structUnion.Should().Be(TestStructUnion<int>.Case3("test"));
 		}
 
-		[Fact]
-		public void Read_ForUnionWithMultipleParameters_ReadCorrectly()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForUnionWithMultipleParameters_ReadCorrectly(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act
 
-			var result1 = JsonSerializer.Deserialize<TestUnion<int>>("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}", _defaultConverterSerializerOptions);
-			var result2 = JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}", _defaultConverterSerializerOptions);
-			var result3 = JsonSerializer.Deserialize<TestUnion<int>>("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}", _classConverterSerializerOptions);
-			var result4 = JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}", _structConverterSerializerOptions);
+			var classUnion = classUnionDeserializeFunc("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
+			var structUnion = structUnionDeserializeFunc("{\"Case2\":{\"value1\":\"test\",\"value2\":2}}");
 
 			// Assert
 
-			result1.Should().Be(TestUnion<int>.Case2("test", 2));
-			result2.Should().Be(TestStructUnion<int>.Case2("test", 2));
-			result3.Should().Be(TestUnion<int>.Case2("test", 2));
-			result4.Should().Be(TestStructUnion<int>.Case2("test", 2));
+			classUnion.Should().Be(TestUnion<int>.Case2("test", 2));
+			structUnion.Should().Be(TestStructUnion<int>.Case2("test", 2));
 		}
 
-		[Fact]
-		public void Read_ForInvalidStartToken_ThrowException()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForInvalidStartToken_ThrowException(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act and Assert
 
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("2", _defaultConverterSerializerOptions))
+			FluentActions.Invoking(() => classUnionDeserializeFunc("2"))
 				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Invalid start token \"{JsonTokenType.Number}\" when deserializing \"{typeof(TestUnion<int>).Name}\" union. Expected \"StartObject\" or \"String\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("true", _defaultConverterSerializerOptions))
+				.Throw<Exception>()
+				.WithMessage("Invalid start token *. Expected \"StartObject\" or \"String\".");
+
+			FluentActions.Invoking(() => structUnionDeserializeFunc("true"))
 				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Invalid start token \"{JsonTokenType.True}\" when deserializing \"{typeof(TestStructUnion<int>).Name}\" union. Expected \"StartObject\" or \"String\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("2", _classConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Invalid start token \"{JsonTokenType.Number}\" when deserializing \"{typeof(TestUnion<int>).Name}\" union. Expected \"StartObject\" or \"String\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("true", _structConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Invalid start token \"{JsonTokenType.True}\" when deserializing \"{typeof(TestStructUnion<int>).Name}\" union. Expected \"StartObject\" or \"String\".");
+				.Throw<Exception>()
+				.WithMessage("Invalid start token *. Expected \"StartObject\" or \"String\".");
 		}
 
-		[Fact]
-		public void Read_ForEmptyObject_ThrowException()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForEmptyObject_ThrowException(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Arrange
 
-			var expectedErrorMessage = "There is an invalid union JSON object. It must contain property with case name. There is a token \"EndObject\".";
+			var expectedErrorMessage =
+				"There is an invalid union JSON object. It must contain property with case name. There is a token \"EndObject\".";
 
 			// Act and Assert
 
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{}", _defaultConverterSerializerOptions))
-				.Should().Throw<JsonException>().WithMessage(expectedErrorMessage);
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{}", _defaultConverterSerializerOptions))
-				.Should().Throw<JsonException>().WithMessage(expectedErrorMessage);
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{}", _classConverterSerializerOptions))
-				.Should().Throw<JsonException>().WithMessage(expectedErrorMessage);
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{}", _structConverterSerializerOptions))
-				.Should().Throw<JsonException>().WithMessage(expectedErrorMessage);
+			FluentActions.Invoking(() => classUnionDeserializeFunc("{}"))
+				.Should().Throw<Exception>().WithMessage(expectedErrorMessage);
+			FluentActions.Invoking(() => structUnionDeserializeFunc("{}"))
+				.Should().Throw<Exception>().WithMessage(expectedErrorMessage);
 		}
 
-		[Fact]
-		public void Read_ForInvalidParameterlessCase_ThrowException()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForInvalidParameterlessCase_ThrowException(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act and Assert
 
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("\"InvalidCase\"", _defaultConverterSerializerOptions))
+			FluentActions.Invoking(() => classUnionDeserializeFunc("\"InvalidCase\""))
 				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"There is no parameterless case named \"InvalidCase\" in union \"{typeof(TestUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("\"InvalidCase\"", _defaultConverterSerializerOptions))
+
+			FluentActions.Invoking(() => structUnionDeserializeFunc("\"InvalidCase\""))
 				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"There is no parameterless case named \"InvalidCase\" in union \"{typeof(TestStructUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("\"InvalidCase\"", _classConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"There is no parameterless case named \"InvalidCase\" in union \"{typeof(TestUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("\"InvalidCase\"", _structConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"There is no parameterless case named \"InvalidCase\" in union \"{typeof(TestStructUnion<int>).Name}\".");
 		}
 
-		[Fact]
-		public void Read_ForInvalidWithParametersCase_ThrowException()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForInvalidWithParametersCase_ThrowException(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act and Assert
 
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{\"InvalidCase\":{}}", _defaultConverterSerializerOptions))
+			FluentActions.Invoking(() => classUnionDeserializeFunc("{\"InvalidCase\":{}}"))
 				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"There is no case named \"InvalidCase\" in union \"{typeof(TestUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{\"InvalidCase\":{}}", _defaultConverterSerializerOptions))
+
+			FluentActions.Invoking(() => structUnionDeserializeFunc("{\"InvalidCase\":{}}"))
 				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"There is no case named \"InvalidCase\" in union \"{typeof(TestStructUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{\"InvalidCase\":{}}", _classConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"There is no case named \"InvalidCase\" in union \"{typeof(TestUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{\"InvalidCase\":{}}", _structConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"There is no case named \"InvalidCase\" in union \"{typeof(TestStructUnion<int>).Name}\".");
 		}
 
-		[Fact]
-		public void Read_ForIncompleteCase_ThrowException()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_ForIncompleteCase_ThrowException(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act and Assert
 
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{\"Case2\":{\"value2\":2}}", _defaultConverterSerializerOptions))
+			FluentActions.Invoking(() => classUnionDeserializeFunc("{\"Case2\":{\"value2\":2}}"))
 				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"Not all parameters are present in json for union case \"Case2\" of union \"{typeof(TestUnion<int>).Name}\". Expected: 2, present: 1.");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case2\":{\"value2\":2}}", _defaultConverterSerializerOptions))
+
+			FluentActions.Invoking(() => structUnionDeserializeFunc("{\"Case2\":{\"value2\":2}}"))
 				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Not all parameters are present in json for union case \"Case2\" of union \"{typeof(TestStructUnion<int>).Name}\". Expected: 2, present: 1.");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{\"Case2\":{\"value2\":2}}", _classConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Not all parameters are present in json for union case \"Case2\" of union \"{typeof(TestUnion<int>).Name}\". Expected: 2, present: 1.");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case2\":{\"value2\":2}}", _structConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"Not all parameters are present in json for union case \"Case2\" of union \"{typeof(TestStructUnion<int>).Name}\". Expected: 2, present: 1.");
 		}
 
-		[Fact]
-		public void Read_IfUnionJsonContainsMoreData_ThrowException()
+		[Theory]
+		[MemberData(nameof(UnionDeserializers))]
+		public void Read_IfUnionJsonContainsMoreData_ThrowException(
+			Func<string, TestUnion<int>> classUnionDeserializeFunc,
+			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
 		{
 			// Act and Assert
 
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}", _defaultConverterSerializerOptions))
+			FluentActions.Invoking(() =>
+					classUnionDeserializeFunc("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}"))
 				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"Unexpected end of union JSON. Token: \"{JsonTokenType.PropertyName}\", union: \"{typeof(TestUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}", _defaultConverterSerializerOptions))
+
+			FluentActions.Invoking(() =>
+					structUnionDeserializeFunc("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}"))
 				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Unexpected end of union JSON. Token: \"{JsonTokenType.PropertyName}\", union: \"{typeof(TestStructUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestUnion<int>>("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}", _classConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
-				.WithMessage(
-					$"Unexpected end of union JSON. Token: \"{JsonTokenType.PropertyName}\", union: \"{typeof(TestUnion<int>).Name}\".");
-			FluentActions.Invoking(() => JsonSerializer.Deserialize<TestStructUnion<int>>("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}", _structConverterSerializerOptions))
-				.Should()
-				.Throw<JsonException>()
+				.Throw<Exception>()
 				.WithMessage(
 					$"Unexpected end of union JSON. Token: \"{JsonTokenType.PropertyName}\", union: \"{typeof(TestStructUnion<int>).Name}\".");
 		}
