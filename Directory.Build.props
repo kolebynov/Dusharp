@@ -9,7 +9,7 @@
 		<AnalysisLevel>latest</AnalysisLevel>
 		<NoWarn>NU1902,NU1903</NoWarn>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<VersionPrefix>0.7.0</VersionPrefix>
+		<VersionPrefix>0.7.1</VersionPrefix>
 	</PropertyGroup>
 
 	<ItemGroup>

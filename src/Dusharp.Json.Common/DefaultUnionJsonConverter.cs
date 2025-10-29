@@ -36,7 +36,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		var unionConverter = GetConverter(typeToConvert);
 		JsonConverterHelpers.BeforeRead(ref reader, unionConverter.UnionType);
 		var value = unionConverter.Deserializer(ref reader, options);
-		JsonConverterHelpers.AfterRead(ref reader, unionConverter.UnionType);
+		JsonConverterHelpers.AfterRead(ref reader);
 
 		return value;
 	}

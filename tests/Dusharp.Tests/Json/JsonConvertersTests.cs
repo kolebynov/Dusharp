@@ -297,28 +297,5 @@ namespace Dusharp.Tests.Json
 				.WithMessage(
 					$"Not all parameters are present in json for union case \"Case2\" of union \"{typeof(TestStructUnion<int>).Name}\". Expected: 2, present: 1.");
 		}
-
-		[Theory]
-		[MemberData(nameof(UnionDeserializers))]
-		public void Read_IfUnionJsonContainsMoreData_ThrowException(
-			Func<string, TestUnion<int>> classUnionDeserializeFunc,
-			Func<string, TestStructUnion<int>> structUnionDeserializeFunc)
-		{
-			// Act and Assert
-
-			FluentActions.Invoking(() =>
-					classUnionDeserializeFunc("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}"))
-				.Should()
-				.Throw<Exception>()
-				.WithMessage(
-					$"Unexpected end of union JSON. Token: \"{JsonTokenType.PropertyName}\", union: \"{typeof(TestUnion<int>).Name}\".");
-
-			FluentActions.Invoking(() =>
-					structUnionDeserializeFunc("{\"Case3\":{\"value\":\"test\"},\"invalid\":\"yes\"}"))
-				.Should()
-				.Throw<Exception>()
-				.WithMessage(
-					$"Unexpected end of union JSON. Token: \"{JsonTokenType.PropertyName}\", union: \"{typeof(TestStructUnion<int>).Name}\".");
-		}
 	}
 }

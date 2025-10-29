@@ -151,7 +151,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 
 			methodBodyBlock.AppendLine($"{JsonTypeInfos.JsonConverterHelpers}.BeforeRead(ref {readerName}, {UnionTypeFieldName});");
 			methodBodyBlock.AppendLine($"var value = Deserialize(ref {readerName}, {optionsName});");
-			methodBodyBlock.AppendLine($"{JsonTypeInfos.JsonConverterHelpers}.AfterRead(ref {readerName}, {UnionTypeFieldName});");
+			methodBodyBlock.AppendLine($"{JsonTypeInfos.JsonConverterHelpers}.AfterRead(ref {readerName});");
 			methodBodyBlock.AppendLine("return value;");
 		};
 

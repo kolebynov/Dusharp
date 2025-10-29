@@ -1,3 +1,8 @@
+0.7.1
+------
+
+- Fixed an exception during parameterless union case JSON deserialization when JSON contains more fields after the union case.
+
 0.7.0
 ------
 

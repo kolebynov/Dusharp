@@ -63,13 +63,9 @@ public static class JsonConverterHelpers
 		}
 	}
 
-	public static void AfterRead(ref Utf8JsonReader reader, Type unionType)
+	public static void AfterRead(ref Utf8JsonReader reader)
 	{
-		if (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-		{
-			throw new JsonException(
-				$"""Unexpected end of union JSON. Token: "{reader.TokenType}", union: "{unionType.Name}".""");
-		}
+		reader.Read();
 	}
 
 	public static void WriteProperty<T>(Utf8JsonWriter writer, JsonEncodedText name, T value,
