@@ -35,10 +35,10 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 	{
 		var unionConverter = GetConverter(typeToConvert);
 		JsonConverterHelpers.BeforeRead(ref reader, unionConverter.UnionType);
-		var value = unionConverter.Deserializer(ref reader, options);
-		JsonConverterHelpers.AfterRead(ref reader);
+		var result = unionConverter.Deserializer(ref reader, options);
+		JsonConverterHelpers.AfterRead(ref reader, result.HasParameters);
 
-		return value;
+		return result.Union;
 	}
 
 	public override void Write(Utf8JsonWriter writer, IUnion value, JsonSerializerOptions options)
@@ -141,7 +141,8 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 	{
 		var readerExpr = Expression.Parameter(typeof(Utf8JsonReader).MakeByRefType(), "reader");
 		var jsonOptionsExpr = Expression.Parameter(typeof(JsonSerializerOptions), "options");
-		var returnLabel = Expression.Label(typeof(IUnion));
+		var returnLabel = Expression.Label(typeof(DeserializeResult));
+		var deserializeResultCtor = typeof(DeserializeResult).GetConstructors().First(x => x.GetParameters().Length == 2);
 
 		var parameterlessCasesDeserializeExprs = unionCaseInfos
 			.Where(x => x.Parameters.Length == 0)
@@ -151,7 +152,10 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 						Expression.Constant(unionCase.EncodedName.Utf8Value)),
 					Expression.Return(
 						returnLabel,
-						Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(IUnion))),
+						Expression.New(
+							deserializeResultCtor,
+							Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(IUnion)),
+							Expression.Constant(false))),
 					Expression.Empty()));
 
 		var withParametersCasesDeserializeExprs = unionCaseInfos
@@ -166,7 +170,12 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 						Expression.Constant(unionCase.EncodedName.Utf8Value)),
 					Expression.Block(
 						Expression.Call(readerExpr, JsonConverterHelpers.ReadMethodInfo),
-						Expression.Return(returnLabel, Expression.Convert(deserializeExpression, typeof(IUnion)))),
+						Expression.Return(
+							returnLabel,
+							Expression.New(
+								deserializeResultCtor,
+								Expression.Convert(deserializeExpression, typeof(IUnion)),
+								Expression.Constant(true)))),
 					Expression.Empty());
 			});
 
@@ -193,7 +202,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 					Expression.Call(null, JsonConverterHelpers.ThrowInvalidCaseNameMethodInfo, readerExpr,
 						unionTypeExpr),
 				])),
-			Expression.Label(returnLabel, Expression.Constant(null, typeof(IUnion))));
+			Expression.Label(returnLabel, Expression.Constant(default(DeserializeResult), typeof(DeserializeResult))));
 
 		return Expression.Lambda<DeserializeCaseDelegate>(deserializeUnionBody, readerExpr, jsonOptionsExpr).Compile();
 	}
@@ -288,7 +297,20 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		}
 	}
 
-	private delegate IUnion DeserializeCaseDelegate(ref Utf8JsonReader reader, JsonSerializerOptions options);
+	private readonly struct DeserializeResult
+	{
+		public IUnion Union { get; }
+
+		public bool HasParameters { get; }
+
+		public DeserializeResult(IUnion union, bool hasParameters)
+		{
+			Union = union;
+			HasParameters = hasParameters;
+		}
+	}
+
+	private delegate DeserializeResult DeserializeCaseDelegate(ref Utf8JsonReader reader, JsonSerializerOptions options);
 
 	private sealed class UnionConverter
 	{

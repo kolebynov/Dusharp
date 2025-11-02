@@ -61,9 +61,12 @@ internal static class JsonConverterHelpers
 		}
 	}
 
-	public static void AfterRead(JsonReader reader)
+	public static void AfterRead(JsonReader reader, bool needRead)
 	{
-		reader.Read();
+		if (needRead)
+		{
+			reader.Read();
+		}
 	}
 
 	public static void WriteProperty<T>(JsonWriter writer, string name, T value,

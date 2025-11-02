@@ -96,7 +96,9 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 						new MethodDefinition
 						{
 							Name = "Deserialize",
-							ReturnType = new TypeName(unionInfo.TypeInfo, false),
+							ReturnType = new TypeName(
+								TypeInfos.ValueTuple(new TypeName(unionInfo.TypeInfo, false), TypeNames.Boolean),
+								false),
 							Accessibility = Accessibility.Private,
 							MethodModifier = MethodModifier.Static(),
 							Parameters =
@@ -150,9 +152,9 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 			var optionsName = def.Parameters[2].Name;
 
 			methodBodyBlock.AppendLine($"{JsonTypeInfos.JsonConverterHelpers}.BeforeRead(ref {readerName}, {UnionTypeFieldName});");
-			methodBodyBlock.AppendLine($"var value = Deserialize(ref {readerName}, {optionsName});");
-			methodBodyBlock.AppendLine($"{JsonTypeInfos.JsonConverterHelpers}.AfterRead(ref {readerName});");
-			methodBodyBlock.AppendLine("return value;");
+			methodBodyBlock.AppendLine($"var (union, hasParameters) = Deserialize(ref {readerName}, {optionsName});");
+			methodBodyBlock.AppendLine($"{JsonTypeInfos.JsonConverterHelpers}.AfterRead(ref {readerName}, hasParameters);");
+			methodBodyBlock.AppendLine("return union;");
 		};
 
 	private static Action<MethodDefinition, CodeWriter> GetWriteMethodBodyWriter(UnionInfo union) =>
@@ -205,7 +207,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 				{
 					parameterlessUnionBlock.AppendLine($"if ({readerName}.ValueTextEquals({GetUnionCaseEncodedValueFieldName(parameterlessUnionCase.Name)}.Utf8Value))");
 					using var thenBlock = parameterlessUnionBlock.NewBlock();
-					thenBlock.AppendLine($"return {union.TypeInfo}.{parameterlessUnionCase.Name}();");
+					thenBlock.AppendLine($"return ({union.TypeInfo}.{parameterlessUnionCase.Name}(), false);");
 				}
 
 				parameterlessUnionBlock.AppendLine($"{JsonTypeInfos.JsonConverterHelpers}.ThrowInvalidParameterlessCaseName(ref {readerName}, {UnionTypeFieldName});");
@@ -249,7 +251,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 				deserializeCaseBlock
 					.Append($"if (loaded < {withParametersUnionCase.Parameters.Count})")
 					.AppendLine($""" {JsonTypeInfos.JsonConverterHelpers}.ThrowNotAllCaseParametersPresent({UnionTypeFieldName}, "{withParametersUnionCase.Name}", loaded, {withParametersUnionCase.Parameters.Count});""")
-					.AppendLine($"return {union.TypeInfo}.{withParametersUnionCase.Name}({string.Join(", ", parameterVariableNames)});");
+					.AppendLine($"return ({union.TypeInfo}.{withParametersUnionCase.Name}({string.Join(", ", parameterVariableNames)}), true);");
 			}
 
 			methodBodyBlock

@@ -1,3 +1,8 @@
+0.7.2
+------
+
+- Fixed an incorrect parameterless union JSON deserialization when JSON contains more fields after the union case.
+
 0.7.1
 ------
 

@@ -63,9 +63,12 @@ public static class JsonConverterHelpers
 		}
 	}
 
-	public static void AfterRead(ref Utf8JsonReader reader)
+	public static void AfterRead(ref Utf8JsonReader reader, bool needRead)
 	{
-		reader.Read();
+		if (needRead)
+		{
+			reader.Read();
+		}
 	}
 
 	public static void WriteProperty<T>(Utf8JsonWriter writer, JsonEncodedText name, T value,

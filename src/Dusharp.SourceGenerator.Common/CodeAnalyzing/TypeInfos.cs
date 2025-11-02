@@ -41,4 +41,9 @@ public static class TypeInfos
 
 	public static TypeInfo EqualityComparer(TypeName arg) =>
 		TypeInfo.SpecificType(CollectionsGenericNs, null, $"EqualityComparer<{arg.FullyQualifiedName}>", TypeInfo.TypeKind.ReferenceType(false));
+
+	public static TypeInfo ValueTuple(params TypeName[] tupleTypes) =>
+		TypeInfo.SpecificType(SystemNs, null,
+			$"ValueTuple<{string.Join(", ", tupleTypes.Select(x => x.FullyQualifiedName))}>",
+			TypeInfo.TypeKind.ValueType(tupleTypes.All(x => x.TypeInfo.Kind.TryGetValueTypeData(out var isUnmanaged) && isUnmanaged)));
 }

@@ -34,10 +34,10 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 	{
 		var unionConverter = GetConverter(objectType);
 		JsonConverterHelpers.BeforeRead(reader, unionConverter.UnionType);
-		var value = unionConverter.Deserializer(reader, serializer);
-		JsonConverterHelpers.AfterRead(reader);
+		var result = unionConverter.Deserializer(reader, serializer);
+		JsonConverterHelpers.AfterRead(reader, result.HasParameters);
 
-		return value;
+		return result.Union;
 	}
 
 	public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -140,12 +140,13 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 			Expression.Call(writerExpr, JsonConverterHelpers.WriteEndObjectMethodInfo),
 		]);
 
-	private static Func<JsonReader, JsonSerializer, IUnion> CreateDeserializer(
+	private static Func<JsonReader, JsonSerializer, DeserializeResult> CreateDeserializer(
 		Type unionType, IReadOnlyCollection<UnionCaseInfo> unionCaseInfos)
 	{
 		var readerExpr = Expression.Parameter(typeof(JsonReader), "reader");
 		var serializerExpr = Expression.Parameter(typeof(JsonSerializer), "serializer");
-		var returnLabel = Expression.Label(typeof(IUnion));
+		var returnLabel = Expression.Label(typeof(DeserializeResult));
+		var deserializeResultCtor = typeof(DeserializeResult).GetConstructors().First(x => x.GetParameters().Length == 2);
 
 		var parameterlessCasesDeserializeExprs = unionCaseInfos
 			.Where(x => x.Parameters.Length == 0)
@@ -155,7 +156,10 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 						Expression.Constant(unionCase.Name)),
 					Expression.Return(
 						returnLabel,
-						Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(IUnion))),
+						Expression.New(
+							deserializeResultCtor,
+							Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(IUnion)),
+							Expression.Constant(false))),
 					Expression.Empty()));
 
 		var withParametersCasesDeserializeExprs = unionCaseInfos
@@ -170,7 +174,12 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 						Expression.Constant(unionCase.Name)),
 					Expression.Block(
 						Expression.Call(readerExpr, JsonConverterHelpers.ReadMethodInfo),
-						Expression.Return(returnLabel, Expression.Convert(deserializeExpression, typeof(IUnion)))),
+						Expression.Return(
+							returnLabel,
+							Expression.New(
+								deserializeResultCtor,
+								Expression.Convert(deserializeExpression, typeof(IUnion)),
+								Expression.Constant(true)))),
 					Expression.Empty());
 			});
 
@@ -197,9 +206,9 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 					Expression.Call(null, JsonConverterHelpers.ThrowInvalidCaseNameMethodInfo, readerExpr,
 						unionTypeExpr),
 				])),
-			Expression.Label(returnLabel, Expression.Constant(null, typeof(IUnion))));
+			Expression.Label(returnLabel, Expression.Constant(default(DeserializeResult), typeof(DeserializeResult))));
 
-		return Expression.Lambda<Func<JsonReader, JsonSerializer, IUnion>>(deserializeUnionBody, readerExpr, serializerExpr).Compile();
+		return Expression.Lambda<Func<JsonReader, JsonSerializer, DeserializeResult>>(deserializeUnionBody, readerExpr, serializerExpr).Compile();
 	}
 
 	private static Expression GetDeserializeMultipleParametersCaseExpression(
@@ -287,17 +296,30 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 		}
 	}
 
+	private readonly struct DeserializeResult
+	{
+		public IUnion Union { get; }
+
+		public bool HasParameters { get; }
+
+		public DeserializeResult(IUnion union, bool hasParameters)
+		{
+			Union = union;
+			HasParameters = hasParameters;
+		}
+	}
+
 	private sealed class UnionConverter
 	{
 		public Type UnionType { get; }
 
 		public Action<JsonWriter, IUnion, JsonSerializer> Serializer { get; }
 
-		public Func<JsonReader, JsonSerializer, IUnion> Deserializer { get; }
+		public Func<JsonReader, JsonSerializer, DeserializeResult> Deserializer { get; }
 
 		public UnionConverter(
 			Type unionType, Action<JsonWriter, IUnion, JsonSerializer> serializer,
-			Func<JsonReader, JsonSerializer, IUnion> deserializer)
+			Func<JsonReader, JsonSerializer, DeserializeResult> deserializer)
 		{
 			UnionType = unionType;
 			Serializer = serializer;
