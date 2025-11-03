@@ -17,7 +17,7 @@ public sealed partial class PropertyDefinition
 
 	public PropertyAccessor? Setter { get; init; }
 
-	public string? Initializer { get; init; }
+	public Action<CodeWriter>? InitializerWriter { get; init; }
 
 	public IReadOnlyList<string> Attributes { get; init; } = [];
 

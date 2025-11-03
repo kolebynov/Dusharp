@@ -1,3 +1,5 @@
+#!/usr/bin/env pwsh
+
 cd $PSScriptRoot
 
 Remove-Item ./NugetPackages/* -Recurse -Force

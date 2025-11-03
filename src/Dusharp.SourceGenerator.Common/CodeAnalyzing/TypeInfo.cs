@@ -43,7 +43,9 @@ public sealed partial class TypeInfo : IEquatable<TypeInfo>
 
 	public override bool Equals(object? obj) => ReferenceEquals(this, obj) || (obj is TypeInfo other && Equals(other));
 
+#pragma warning disable CA1307
 	public override int GetHashCode() => _fullyQualifiedName.GetHashCode();
+#pragma warning restore CA1307
 
 	public override string ToString() => GetFullyQualifiedName(false);
 

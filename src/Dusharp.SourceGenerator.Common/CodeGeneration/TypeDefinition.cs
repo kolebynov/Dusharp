@@ -22,7 +22,9 @@ public sealed record class TypeDefinition
 				return _nameWithoutGenerics;
 			}
 
+#pragma warning disable CA1307
 			var genericStart = Name.IndexOf('<');
+#pragma warning restore CA1307
 			if (genericStart < 0)
 			{
 				return _nameWithoutGenerics = Name;

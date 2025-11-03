@@ -107,7 +107,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 				IsReadOnly = true,
 				TypeName = new TypeName(caseTypeInfo, false),
 				Name = "Instance",
-				Initializer = $"new {caseTypeInfo}()",
+				InitializerWriter = codeWriter => codeWriter.Append($"new {caseTypeInfo}()"),
 			})
 			: fields;
 

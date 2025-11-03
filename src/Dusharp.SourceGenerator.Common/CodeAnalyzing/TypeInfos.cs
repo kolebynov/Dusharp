@@ -22,6 +22,9 @@ public static class TypeInfos
 	public static readonly TypeInfo Unsafe = TypeInfo.SpecificType(CompilerServicesNs, null, "Unsafe", TypeInfo.TypeKind.ReferenceType(false));
 
 	public static readonly TypeInfo IUnion = TypeInfo.SpecificType(DusharpNs, null, "IUnion", TypeInfo.TypeKind.ReferenceType(true));
+	public static readonly TypeInfo UnionDescription = TypeInfo.SpecificType(DusharpNs, null, "UnionDescription", TypeInfo.TypeKind.ReferenceType(false));
+	public static readonly TypeInfo UnionCaseDescription = TypeInfo.SpecificType(DusharpNs, null, "UnionCaseDescription", TypeInfo.TypeKind.ReferenceType(false));
+	public static readonly TypeInfo UnionUnionCaseParameterDescription = TypeInfo.SpecificType(DusharpNs, null, "UnionCaseParameterDescription", TypeInfo.TypeKind.ReferenceType(false));
 
 	public static TypeInfo IEquatable(TypeName arg) =>
 		TypeInfo.SpecificType(SystemNs, null, $"IEquatable<{arg.FullyQualifiedName}>", TypeInfo.TypeKind.ReferenceType(true));
@@ -34,7 +37,9 @@ public static class TypeInfos
 	public static TypeInfo Func(IReadOnlyCollection<TypeName> parameterArgs, TypeName returnArg)
 	{
 		var parametersString = parameterArgs
+#pragma warning disable CA1305
 			.Aggregate(new StringBuilder(), (sb, t) => sb.Append($"{t.FullyQualifiedName}, "), sb => sb.ToString());
+#pragma warning restore CA1305
 		return TypeInfo.SpecificType(SystemNs, null, $"Func<{parametersString}{returnArg.FullyQualifiedName}>",
 			TypeInfo.TypeKind.ReferenceType(false));
 	}

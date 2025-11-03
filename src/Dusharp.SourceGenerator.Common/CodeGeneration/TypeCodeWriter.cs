@@ -84,14 +84,22 @@ public sealed class TypeCodeWriter
 			WriteAttribute(attribute, typeBodyBlock);
 		}
 
-		var declarationBuilder = new DeclarationBuilder()
+		typeBodyBlock.Append(new DeclarationBuilder()
 			.AddIf(fieldDefinition.Accessibility != null, () => fieldDefinition.Accessibility!.Value.ToCodeString())
 			.AddIf(fieldDefinition.IsStatic, () => "static")
 			.AddIf(fieldDefinition.IsReadOnly, () => "readonly")
 			.Add(fieldDefinition.TypeName.FullyQualifiedName)
 			.Add(fieldDefinition.Name)
-			.AddIf(fieldDefinition.Initializer != null, () => "=", () => fieldDefinition.Initializer!);
-		typeBodyBlock.AppendLine($"{declarationBuilder};");
+			.ToString());
+
+		if (fieldDefinition.InitializerWriter != null)
+		{
+			WriteFieldInitializer(typeBodyBlock, fieldDefinition.InitializerWriter);
+		}
+		else
+		{
+			typeBodyBlock.AppendLine(";");
+		}
 	}
 
 	private static void WriteProperty(PropertyDefinition propertyDefinition, CodeWriter typeBodyBlock)
@@ -120,9 +128,9 @@ public sealed class TypeCodeWriter
 			}
 		}
 
-		if (propertyDefinition.Initializer != null)
+		if (propertyDefinition.InitializerWriter != null)
 		{
-			typeBodyBlock.AppendLine($" = {propertyDefinition.Initializer};");
+			WriteFieldInitializer(typeBodyBlock, propertyDefinition.InitializerWriter);
 		}
 
 		return;
@@ -165,6 +173,13 @@ public sealed class TypeCodeWriter
 			.ToString();
 
 		typeBodyBlock.AppendLine($"{declarationStr}({ToParametersString(constructorDefinition.Parameters)})");
+	}
+
+	private static void WriteFieldInitializer(CodeWriter codeWriter, Action<CodeWriter> initializer)
+	{
+		codeWriter.Append(" = ");
+		initializer(codeWriter);
+		codeWriter.AppendLine(";");
 	}
 
 	private static void WriteMethod(MethodDefinition methodDefinition, CodeWriter typeBodyBlock)

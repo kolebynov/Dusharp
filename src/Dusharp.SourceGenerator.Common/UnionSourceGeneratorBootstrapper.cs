@@ -51,7 +51,9 @@ public static class UnionSourceGeneratorBootstrapper
 
 	private static void ReportException(SourceProductionContext context, Exception e, string? message = null)
 	{
+#pragma warning disable CA1307
 		var exceptionString = e.ToString().Replace("\r", string.Empty).Replace('\n', ' ');
+#pragma warning restore CA1307
 
 		context.ReportDiagnostic(Diagnostic.Create(
 			new DiagnosticDescriptor("DU0001", "Exception", string.IsNullOrEmpty(message) ? exceptionString : $"{message}: {exceptionString}", "error", DiagnosticSeverity.Error, true),

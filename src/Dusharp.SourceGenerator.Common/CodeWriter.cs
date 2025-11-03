@@ -23,7 +23,7 @@ public sealed class CodeWriter : IDisposable
 
 	public CodeWriter AppendLine(string line) => Append(_depthStr, line, true);
 
-	public CodeWriter Append(string line) => Append(_depthStr, line, false);
+	public CodeWriter Append(string? line) => Append(_depthStr, line, false);
 
 	public CodeWriter Append<T>(T value) => Append(value!.ToString());
 
@@ -58,7 +58,7 @@ public sealed class CodeWriter : IDisposable
 		_writeSemicolonOnClose = writeSemicolonOnClose;
 	}
 
-	private CodeWriter Append(string depthStr, string line, bool newLine)
+	private CodeWriter Append(string depthStr, string? line, bool newLine)
 	{
 		if (_stringBuilder.Length > 0 && line != "}" && _stringBuilder[^(NewLine.Length + 1)] == '}' && _stringBuilder[^(NewLine.Length + 2)] is '\n' or '\t')
 		{

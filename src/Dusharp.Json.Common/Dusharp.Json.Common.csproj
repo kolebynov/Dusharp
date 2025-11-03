@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
 		<RootNamespace>Dusharp.Json</RootNamespace>
 	</PropertyGroup>
 
@@ -10,7 +10,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="[6.0,)"/>
+		<PackageReference Include="System.Text.Json" Version="[6.0,)" Condition="'$(TargetFramework)' == 'netstandard2.0'"/>
 	</ItemGroup>
 
 </Project>

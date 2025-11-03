@@ -15,7 +15,7 @@ public sealed class FieldDefinition
 
 	public required string Name { get; init; }
 
-	public string? Initializer { get; init; }
+	public Action<CodeWriter>? InitializerWriter { get; init; }
 
 	public IReadOnlyList<string> Attributes { get; init; } = [];
 }

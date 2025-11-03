@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Dusharp.Json;
 
-public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
+public sealed class DefaultUnionJsonConverter : JsonConverter<object>
 {
 	private readonly ConcurrentDictionary<Type, UnionConverter> _converters = new();
 
@@ -31,7 +31,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		return hasUnionAttribute || typeToConvert.BaseType?.GetCustomAttribute<UnionAttribute>() != null;
 	}
 
-	public override IUnion? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var unionConverter = GetConverter(typeToConvert);
 		JsonConverterHelpers.BeforeRead(ref reader, unionConverter.UnionType);
@@ -41,7 +41,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		return result.Union;
 	}
 
-	public override void Write(Utf8JsonWriter writer, IUnion value, JsonSerializerOptions options)
+	public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
 	{
 		GetConverter(value.GetType()).Serializer(writer, value, options);
 	}
@@ -66,11 +66,11 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		return new UnionConverter(unionType, serializer, deserializer);
 	}
 
-	private static Action<Utf8JsonWriter, IUnion, JsonSerializerOptions> CreateSerializer(
+	private static Action<Utf8JsonWriter, object, JsonSerializerOptions> CreateSerializer(
 		Type unionType, IReadOnlyCollection<UnionCaseInfo> unionCaseInfos)
 	{
 		var writerExpr = Expression.Parameter(typeof(Utf8JsonWriter), "writer");
-		var valueExpr = Expression.Parameter(typeof(IUnion), "value");
+		var valueExpr = Expression.Parameter(typeof(object), "value");
 		var jsonOptionsExpr = Expression.Parameter(typeof(JsonSerializerOptions), "options");
 		var returnLabel = Expression.Label();
 
@@ -106,7 +106,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 		]);
 
 		return Expression
-			.Lambda<Action<Utf8JsonWriter, IUnion, JsonSerializerOptions>>(serializerBody, writerExpr, valueExpr, jsonOptionsExpr)
+			.Lambda<Action<Utf8JsonWriter, object, JsonSerializerOptions>>(serializerBody, writerExpr, valueExpr, jsonOptionsExpr)
 			.Compile();
 	}
 
@@ -154,7 +154,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 						returnLabel,
 						Expression.New(
 							deserializeResultCtor,
-							Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(IUnion)),
+							Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(object)),
 							Expression.Constant(false))),
 					Expression.Empty()));
 
@@ -174,7 +174,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 							returnLabel,
 							Expression.New(
 								deserializeResultCtor,
-								Expression.Convert(deserializeExpression, typeof(IUnion)),
+								Expression.Convert(deserializeExpression, typeof(object)),
 								Expression.Constant(true)))),
 					Expression.Empty());
 			});
@@ -292,18 +292,18 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 			TryGetDataMethod = createCaseMethod.DeclaringType!.GetMethod(
 				UnionNamesProvider.GetTryGetCaseDataMethodName(Name), BindingFlags.Public | BindingFlags.Instance)!;
 			Parameters = createCaseMethod.GetParameters()
-				.Select(p => new UnionCaseParameterInfo(p.Name, p.ParameterType))
+				.Select(p => new UnionCaseParameterInfo(p.Name!, p.ParameterType))
 				.ToArray();
 		}
 	}
 
 	private readonly struct DeserializeResult
 	{
-		public IUnion Union { get; }
+		public object Union { get; }
 
 		public bool HasParameters { get; }
 
-		public DeserializeResult(IUnion union, bool hasParameters)
+		public DeserializeResult(object union, bool hasParameters)
 		{
 			Union = union;
 			HasParameters = hasParameters;
@@ -316,12 +316,12 @@ public sealed class DefaultUnionJsonConverter : JsonConverter<IUnion>
 	{
 		public Type UnionType { get; }
 
-		public Action<Utf8JsonWriter, IUnion, JsonSerializerOptions> Serializer { get; }
+		public Action<Utf8JsonWriter, object, JsonSerializerOptions> Serializer { get; }
 
 		public DeserializeCaseDelegate Deserializer { get; }
 
 		public UnionConverter(
-			Type unionType, Action<Utf8JsonWriter, IUnion, JsonSerializerOptions> serializer,
+			Type unionType, Action<Utf8JsonWriter, object, JsonSerializerOptions> serializer,
 			DeserializeCaseDelegate deserializer)
 		{
 			UnionType = unionType;
