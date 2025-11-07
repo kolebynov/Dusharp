@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Dusharp.SourceGenerator.Common.CodeGeneration;
 
-public sealed record class MethodDefinition
+public sealed record MethodDefinition
 {
 	public Accessibility? Accessibility { get; init; }
 

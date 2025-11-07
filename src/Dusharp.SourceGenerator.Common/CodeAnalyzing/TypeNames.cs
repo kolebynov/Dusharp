@@ -12,4 +12,11 @@ public static class TypeNames
 	public static TypeName String(bool isRefNullable = false) => new(TypeInfos.String, isRefNullable);
 
 	public static TypeName Type(bool isRefNullable = false) => new(TypeInfos.Type, isRefNullable);
+
+	public static TypeName ValueTuple(params TypeName[] tupleTypes) =>
+		new(TypeInfos.ValueTuple(tupleTypes), false);
+
+	public static TypeName Span(TypeName itemType) => new(TypeInfos.Span(itemType), false);
+
+	public static TypeName ReadOnlySpan(TypeName itemType) => new(TypeInfos.ReadOnlySpan(itemType), false);
 }

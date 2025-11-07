@@ -17,14 +17,14 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 	private readonly UnionImplementationGenerator _unionImplementationGenerator;
 	private readonly IReadOnlyDictionary<UnionCaseInfo, IReadOnlyList<CaseParameter>> _casesParameters;
 
-	public TypeKind TypeKind => TypeKind.Struct(false);
+	public TypeKind TypeKind => new TypeKind.Struct(false);
 
 	public StructUnionDefinitionGenerator(UnionInfo union)
 	{
 		_union = union;
 		_unionImplementationGenerator = new UnionImplementationGenerator(
 			TypeInfo.SpecificType(union.TypeInfo.Namespace, union.TypeInfo.ContainingType, $"{union.Name}BlittableData",
-				TypeInfo.TypeKind.ValueType(true)));
+				new TypeInfo.TypeKind.ValueType(true)));
 		_casesParameters = union.Cases
 			.ToDictionary(
 				unionCase => unionCase,
@@ -159,7 +159,7 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 				new MethodDefinition
 				{
 					Accessibility = Accessibility.Public,
-					MethodModifier = MethodModifier.Override(),
+					MethodModifier = MethodModifier.Override,
 					ReturnType = TypeNames.String(),
 					Name = "ToString",
 					BodyWriter = (_, methodBlock) =>
@@ -224,42 +224,46 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 			_unionBlittableDataTypeInfo = unionBlittableDataTypeInfo;
 		}
 
-		public CaseParameter AddCaseParameter(UnionCaseParameterInfo caseParameter, UnionCaseInfo unionCase) =>
-			caseParameter.TypeName.TypeInfo.Kind.Match(
-				_ =>
-				{
+		public CaseParameter AddCaseParameter(UnionCaseParameterInfo caseParameter, UnionCaseInfo unionCase)
+		{
+			switch (caseParameter.TypeName.TypeInfo.Kind)
+			{
+				case TypeInfo.TypeKind.ReferenceType:
 					var referenceTypeParameter = GetOrAddDefaultParameter(TypeNames.Object(), unionCase);
 					return new CaseParameter(
 						referenceTypeParameter.Name,
 						caseParameter.TypeName,
 						v => $"{TypeInfos.Unsafe}.As<{caseParameter.TypeName}>({v}.{referenceTypeParameter.Name})");
-				},
-				isUnmanaged =>
-				{
+
+				case TypeInfo.TypeKind.ValueType { IsUnmanaged: var isUnmanaged }:
 					if (isUnmanaged && !caseParameter.ContainsGenericParameters)
 					{
 						if (!_blittableParameters.TryGetValue(unionCase, out var blittableStructInfo))
 						{
 							var typeInfo = TypeInfo.SpecificType(
 								_unionBlittableDataTypeInfo.Namespace, _unionBlittableDataTypeInfo,
-								$"{unionCase.Name}BlittableData", TypeInfo.TypeKind.ValueType(true));
+								$"{unionCase.Name}BlittableData", new TypeInfo.TypeKind.ValueType(true));
 							blittableStructInfo = new CaseBlittableStructInfo(typeInfo, $"{unionCase.Name}Data", []);
 							_blittableParameters[unionCase] = blittableStructInfo;
 						}
 
 						blittableStructInfo.Fields.Add(new TypeNamePair(caseParameter.TypeName, caseParameter.Name));
-						var fieldPath = $"{BlittableStructFieldName}.{blittableStructInfo.FieldName}.{caseParameter.Name}";
+						var fieldPath =
+							$"{BlittableStructFieldName}.{blittableStructInfo.FieldName}.{caseParameter.Name}";
 						return new CaseParameter(fieldPath, caseParameter.TypeName, v => $"{v}.{fieldPath}");
 					}
 
 					var defaultParameter = GetOrAddDefaultParameter(caseParameter.TypeName, unionCase);
 					return new CaseParameter(defaultParameter.Name, caseParameter.TypeName, v => $"{v}.{defaultParameter.Name}");
-				},
-				() =>
-				{
-					var defaultParameter = GetOrAddDefaultParameter(new TypeName(caseParameter.TypeName.TypeInfo, false), unionCase);
-					return new CaseParameter(defaultParameter.Name, caseParameter.TypeName, v => $"{v}.{defaultParameter.Name}");
-				});
+
+				case TypeInfo.TypeKind.Unknown:
+					var defaultParameterUnknown = GetOrAddDefaultParameter(new TypeName(caseParameter.TypeName.TypeInfo, false), unionCase);
+					return new CaseParameter(defaultParameterUnknown.Name, caseParameter.TypeName, v => $"{v}.{defaultParameterUnknown.Name}");
+
+				default:
+					throw new ArgumentOutOfRangeException(nameof(caseParameter), caseParameter.TypeName.TypeInfo.Kind, null);
+			}
+		}
 
 		public TypeDefinition AdjustUnionTypeDefinition(TypeDefinition typeDefinition)
 		{
@@ -319,7 +323,7 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 			return new TypeDefinition
 			{
 				Accessibility = Accessibility.Internal,
-				Kind = TypeKind.Struct(false),
+				Kind = new TypeKind.Struct(false),
 				Name = _unionBlittableDataTypeInfo.Name,
 				Attributes = [GetLayoutAttribute(LayoutKind.Explicit)],
 				Fields = _blittableParameters.Values
@@ -335,7 +339,7 @@ public sealed class StructUnionDefinitionGenerator : IUnionDefinitionGenerator
 					.Select(x => new TypeDefinition
 					{
 						Accessibility = Accessibility.Public,
-						Kind = TypeKind.Struct(false),
+						Kind = new TypeKind.Struct(false),
 						Name = x.StructInfo.Name,
 						Attributes = [GetLayoutAttribute(LayoutKind.Auto)],
 						Fields = x.Fields

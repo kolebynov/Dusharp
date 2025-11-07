@@ -23,7 +23,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="[6.0,)" Condition="'$(TargetFramework)' == 'netstandard2.0'"/>
+		<PackageReference Include="System.Text.Json" Version="[8.0,)" Condition="'$(TargetFramework)' == 'netstandard2.0'"/>
 		<PackageReference Include="Dusharp" Version="$(Version)" PrivateAssets="build;contentfiles"/>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" PrivateAssets="all"/>
 	</ItemGroup>

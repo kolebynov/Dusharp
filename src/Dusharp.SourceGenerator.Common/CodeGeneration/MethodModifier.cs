@@ -1,17 +1,9 @@
 namespace Dusharp.SourceGenerator.Common.CodeGeneration;
 
-[Union]
-public partial class MethodModifier
+public enum MethodModifier
 {
-	[UnionCase]
-	public static partial MethodModifier Static();
-
-	[UnionCase]
-	public static partial MethodModifier Abstract();
-
-	[UnionCase]
-	public static partial MethodModifier Virtual();
-
-	[UnionCase]
-	public static partial MethodModifier Override();
+	Static,
+	Abstract,
+	Virtual,
+	Override,
 }

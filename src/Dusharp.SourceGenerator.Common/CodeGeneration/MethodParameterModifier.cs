@@ -1,14 +1,8 @@
 namespace Dusharp.SourceGenerator.Common.CodeGeneration;
 
-[Union]
-public partial struct MethodParameterModifier
+public enum MethodParameterModifier
 {
-	[UnionCase]
-	public static partial MethodParameterModifier In();
-
-	[UnionCase]
-	public static partial MethodParameterModifier Ref();
-
-	[UnionCase]
-	public static partial MethodParameterModifier Out();
+	In,
+	Ref,
+	Out,
 }

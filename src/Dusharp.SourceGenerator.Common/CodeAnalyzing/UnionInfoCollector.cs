@@ -35,10 +35,10 @@ public static class UnionInfoCollector
 			typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
 			typeSymbol switch
 			{
-				{ IsUnmanagedType: true } => TypeInfo.TypeKind.ValueType(true),
-				{ IsValueType: true } => TypeInfo.TypeKind.ValueType(false),
-				{ IsReferenceType: true } => TypeInfo.TypeKind.ReferenceType(typeSymbol.TypeKind == TypeKind.Interface),
-				_ => TypeInfo.TypeKind.Unknown(),
+				{ IsUnmanagedType: true } => new TypeInfo.TypeKind.ValueType(true),
+				{ IsValueType: true } => new TypeInfo.TypeKind.ValueType(false),
+				{ IsReferenceType: true } => new TypeInfo.TypeKind.ReferenceType(typeSymbol.TypeKind == TypeKind.Interface),
+				_ => new TypeInfo.TypeKind.Unknown(),
 			});
 
 	private static bool ContainsGenericParameters(ITypeSymbol typeSymbol) =>

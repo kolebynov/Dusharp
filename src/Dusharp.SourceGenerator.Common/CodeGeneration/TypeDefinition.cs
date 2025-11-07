@@ -3,7 +3,7 @@ using TypeInfo = Dusharp.SourceGenerator.Common.CodeAnalyzing.TypeInfo;
 
 namespace Dusharp.SourceGenerator.Common.CodeGeneration;
 
-public sealed record class TypeDefinition
+public sealed record TypeDefinition
 {
 	private string? _nameWithoutGenerics;
 

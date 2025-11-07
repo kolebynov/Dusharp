@@ -70,11 +70,12 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 				IsPartial = true,
 				InheritedTypes =
 				[
+					TypeInfos.IUnion(_union.TypeInfo),
 					TypeInfos.IEquatable(new TypeName(_union.TypeInfo, false)),
-					TypeInfos.IUnion,
 				],
 				Properties = _union.Cases
 					.Select(GetIsCaseProperty)
+					.Append(GetCaseNameProperty())
 					.Append(GetUnionDescriptionProperty())
 					.ToArray(),
 				Methods = _union.Cases
@@ -87,7 +88,9 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 						GetMatchMethod(MatchMethodConfiguration.WithStateWithReturn),
 					])
 					.Concat(_union.Cases.Select(GetTryGetCaseDataMethod))
+					.Append(GetCaseParametersMethod())
 					.Concat(GetDefaultEqualsMethods())
+					.Append(GetCreateUnionMethod())
 					.ToArray(),
 				Operators = GetEqualityOperators(_nullableUnionTypeName, _unionDefinitionGenerator),
 			};
@@ -103,8 +106,31 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 				TypeName = TypeNames.Boolean,
 				Getter = new PropertyDefinition.PropertyAccessor(
 					null,
-					PropertyDefinition.PropertyAccessorImpl.Bodied((_, bodyBlock) =>
+					new PropertyDefinition.PropertyAccessorImpl.Bodied((_, bodyBlock) =>
 						bodyBlock.AppendLine($"return {_unionDefinitionGenerator.GetUnionCaseCheckExpression(unionCase)};"))),
+			};
+
+		private PropertyDefinition GetCaseNameProperty() =>
+			new()
+			{
+				Name = "CaseName",
+				Accessibility = Accessibility.Public,
+				TypeName = TypeNames.String(),
+				Getter = new PropertyDefinition.PropertyAccessor(
+					null,
+					new PropertyDefinition.PropertyAccessorImpl.Bodied(
+						(_, bodyWriter) =>
+						{
+							foreach (var unionCase in _union.Cases)
+							{
+								bodyWriter.AppendLine($"if ({UnionNamesProvider.GetIsCasePropertyName(unionCase.Name)})");
+								using var thenBlock = bodyWriter.NewBlock();
+								thenBlock.AppendLine($"return \"{unionCase.Name}\";");
+							}
+
+							bodyWriter.AppendLine(UnionGenerationUtils.ThrowUnionInInvalidStateCode);
+							bodyWriter.AppendLine("return default!;");
+						})),
 			};
 
 		private PropertyDefinition GetUnionDescriptionProperty() =>
@@ -114,26 +140,34 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 				Accessibility = Accessibility.Public,
 				IsStatic = true,
 				TypeName = new TypeName(TypeInfos.UnionDescription, false),
-				Getter = new PropertyDefinition.PropertyAccessor(null, PropertyDefinition.PropertyAccessorImpl.Auto()),
+				Getter = new PropertyDefinition.PropertyAccessor(null, new PropertyDefinition.PropertyAccessorImpl.Auto()),
 				InitializerWriter = codeWriter =>
 				{
 					codeWriter
-						.AppendLine($"new {TypeInfos.UnionDescription}(")
-						.Append($"\"{_union.Name}\"");
-					foreach (var unionCase in _union.Cases)
+						.AppendLine($"new {TypeInfos.UnionDescription}(");
+					using (codeWriter.IncreaseDepth())
 					{
-						codeWriter
-							.AppendLine(",")
-							.AppendLine($"new {TypeInfos.UnionCaseDescription}(")
-							.Append($"\"{unionCase.Name}\"");
-						foreach (var unionCaseParameter in unionCase.Parameters)
+						codeWriter.Append($"\"{_union.Name}\"");
+						foreach (var unionCase in _union.Cases)
 						{
 							codeWriter
 								.AppendLine(",")
-								.Append($"new {TypeInfos.UnionUnionCaseParameterDescription}(\"{unionCaseParameter.Name}\", typeof({unionCaseParameter.TypeName.TypeInfo}))");
-						}
+								.AppendLine($"new {TypeInfos.UnionCaseDescription}(");
+							using (codeWriter.IncreaseDepth())
+							{
+								codeWriter.Append($"\"{unionCase.Name}\"");
+								foreach (var unionCaseParameter in unionCase.Parameters)
+								{
+									codeWriter
+										.AppendLine(",")
+										.Append($"new {TypeInfos.UnionUnionCaseParameterDescription}(\"{unionCaseParameter.Name}\", typeof({unionCaseParameter.TypeName.TypeInfo}))");
+								}
 
-						codeWriter.Append(")");
+								codeWriter.AppendLine();
+							}
+
+							codeWriter.Append(")");
+						}
 					}
 
 					codeWriter.Append(")");
@@ -146,7 +180,7 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 				Name = unionCase.Name,
 				ReturnType = new TypeName(_union.TypeInfo, false),
 				Accessibility = Accessibility.Public,
-				MethodModifier = MethodModifier.Static(),
+				MethodModifier = MethodModifier.Static,
 				IsPartial = true,
 				Parameters = unionCase.Parameters.Select(x => new MethodParameter(x.TypeName, x.Name)).ToArray(),
 				BodyWriter = _unionDefinitionGenerator.GetUnionCaseMethodBodyWriter(unionCase),
@@ -201,7 +235,7 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 				ReturnType = TypeNames.Boolean,
 				Accessibility = Accessibility.Public,
 				Parameters = unionCase.Parameters
-					.Select(x => new MethodParameter(x.TypeName, x.Name, MethodParameterModifier.Out()))
+					.Select(x => new MethodParameter(x.TypeName, x.Name, MethodParameterModifier.Out))
 					.ToArray(),
 				BodyWriter = (_, methodBodyBlock) =>
 				{
@@ -226,6 +260,36 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 				},
 			};
 
+		private MethodDefinition GetCaseParametersMethod() =>
+			new()
+			{
+				Name = "GetCaseParameters",
+				Accessibility = Accessibility.Public,
+				ReturnType = TypeNames.Void,
+				Parameters = [new MethodParameter(TypeNames.Span(TypeNames.Object(true)), "parameters")],
+				BodyWriter = (def, methodBodyBlock) =>
+				{
+					var parametersParameter = def.Parameters[0].Name;
+					foreach (var unionCase in _union.Cases)
+					{
+						methodBodyBlock.AppendLine($"if ({UnionNamesProvider.GetIsCasePropertyName(unionCase.Name)})");
+						using var thenBlock = methodBodyBlock.NewBlock();
+						if (unionCase.HasParameters)
+						{
+							thenBlock.AppendLine($"if ({parametersParameter}.Length < {unionCase.Parameters.Count}) " +
+							                     $"{UnionGenerationUtils.ThrowInvalidParametersCount(unionCase, parametersParameter)}");
+						}
+
+						foreach (var (accessor, index) in _unionDefinitionGenerator.GetUnionCaseParameterAccessors(unionCase).Select((x, i) => (x, i)))
+						{
+							thenBlock.AppendLine($"{parametersParameter}[{index}] = {accessor};");
+						}
+
+						thenBlock.AppendLine("return;");
+					}
+				},
+			};
+
 		private MethodDefinition[] GetDefaultEqualsMethods() =>
 		[
 			_unionDefinitionGenerator.AdjustSpecificEqualsMethod(new MethodDefinition
@@ -241,17 +305,57 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 				Accessibility = Accessibility.Public,
 				ReturnType = TypeNames.Boolean,
 				Parameters = [new MethodParameter(TypeNames.Object(true), "other")],
-				MethodModifier = MethodModifier.Override(),
+				MethodModifier = MethodModifier.Override,
 			}),
 			new MethodDefinition
 			{
 				Name = "GetHashCode",
 				Accessibility = Accessibility.Public,
 				ReturnType = TypeNames.Int32,
-				MethodModifier = MethodModifier.Override(),
+				MethodModifier = MethodModifier.Override,
 				BodyWriter = _unionDefinitionGenerator.GetGetHashCodeMethodBodyWriter(),
 			},
 		];
+
+		private MethodDefinition GetCreateUnionMethod() =>
+			new()
+			{
+				Name = "CreateUnion",
+				Accessibility = Accessibility.Public,
+				MethodModifier = MethodModifier.Static,
+				ReturnType = new TypeName(_union.TypeInfo, false),
+				Parameters =
+				[
+					new MethodParameter(TypeNames.String(), "name"),
+					new MethodParameter(TypeNames.ReadOnlySpan(TypeNames.Object(true)), "parameters"),
+				],
+				BodyWriter = (def, bodyWriter) =>
+				{
+					var nameParameter = def.Parameters[0].Name;
+					var parametersParameter = def.Parameters[1].Name;
+
+					foreach (var unionCase in _union.Cases)
+					{
+						bodyWriter.AppendLine($"if ({nameParameter} == \"{unionCase.Name}\")");
+						using var thenBlock = bodyWriter.NewBlock();
+						if (unionCase.HasParameters)
+						{
+							thenBlock.AppendLine(
+								$"if ({parametersParameter}.Length < {unionCase.Parameters.Count}) {{ " +
+								$"{UnionGenerationUtils.ThrowInvalidParametersCount(unionCase, parametersParameter)} " +
+								$"return default!; }}");
+						}
+
+						var parametersStr = string.Join(
+							", ", unionCase.Parameters.Select((p, i) => $"({p.TypeName}){parametersParameter}[{i}]!"));
+						thenBlock.AppendLine($"return {unionCase.Name}({parametersStr});");
+					}
+
+					bodyWriter
+						.AppendLine(UnionGenerationUtils.ThrowCaseDoesNotExist(_union.Name, nameParameter))
+						.AppendLine("return default!;");
+				},
+			};
 
 		private static OperatorDefinition[] GetEqualityOperators(
 			TypeName nullableUnionTypeName, IUnionDefinitionGenerator unionDefinitionGenerator) =>
@@ -284,10 +388,10 @@ public sealed class UnionCodeGenerator : IUnionCodeGenerator
 	private sealed class MatchMethodConfiguration
 	{
 		private static readonly TypeName TStateName =
-			new(TypeInfo.SpecialName("TState", TypeInfo.TypeKind.Unknown()), false);
+			new(TypeInfo.SpecialName("TState", new TypeInfo.TypeKind.Unknown()), false);
 
 		private static readonly TypeName TRetName =
-			new(TypeInfo.SpecialName("TRet", TypeInfo.TypeKind.Unknown()), false);
+			new(TypeInfo.SpecialName("TRet", new TypeInfo.TypeKind.Unknown()), false);
 
 		public static readonly MatchMethodConfiguration WithoutStateWithoutReturn = new(
 			TypeNames.Void,

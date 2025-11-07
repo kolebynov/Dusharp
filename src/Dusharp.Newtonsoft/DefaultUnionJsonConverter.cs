@@ -70,11 +70,11 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 		return new UnionConverter(unionType, serializer, deserializer);
 	}
 
-	private static Action<JsonWriter, object, JsonSerializer> CreateSerializer(
+	private static Action<JsonWriter, IUnion, JsonSerializer> CreateSerializer(
 		Type unionType, IReadOnlyCollection<UnionCaseInfo> unionCaseInfos)
 	{
 		var writerExpr = Expression.Parameter(typeof(JsonWriter), "writer");
-		var valueExpr = Expression.Parameter(typeof(object), "value");
+		var valueExpr = Expression.Parameter(typeof(IUnion), "value");
 		var serializerExpr = Expression.Parameter(typeof(JsonSerializer), "serializer");
 		var returnLabel = Expression.Label();
 
@@ -110,7 +110,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 		]);
 
 		return Expression
-			.Lambda<Action<JsonWriter, object, JsonSerializer>>(serializerBody, writerExpr, valueExpr, serializerExpr)
+			.Lambda<Action<JsonWriter, IUnion, JsonSerializer>>(serializerBody, writerExpr, valueExpr, serializerExpr)
 			.Compile();
 	}
 
@@ -158,7 +158,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 						returnLabel,
 						Expression.New(
 							deserializeResultCtor,
-							Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(object)),
+							Expression.Convert(Expression.Call(null, unionCase.CreateCaseMethod), typeof(IUnion)),
 							Expression.Constant(false))),
 					Expression.Empty()));
 
@@ -178,7 +178,7 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 							returnLabel,
 							Expression.New(
 								deserializeResultCtor,
-								Expression.Convert(deserializeExpression, typeof(object)),
+								Expression.Convert(deserializeExpression, typeof(IUnion)),
 								Expression.Constant(true)))),
 					Expression.Empty());
 			});
@@ -298,11 +298,11 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 
 	private readonly struct DeserializeResult
 	{
-		public object Union { get; }
+		public IUnion Union { get; }
 
 		public bool HasParameters { get; }
 
-		public DeserializeResult(object union, bool hasParameters)
+		public DeserializeResult(IUnion union, bool hasParameters)
 		{
 			Union = union;
 			HasParameters = hasParameters;
@@ -313,12 +313,12 @@ public sealed class DefaultUnionJsonConverter : JsonConverter
 	{
 		public Type UnionType { get; }
 
-		public Action<JsonWriter, object, JsonSerializer> Serializer { get; }
+		public Action<JsonWriter, IUnion, JsonSerializer> Serializer { get; }
 
 		public Func<JsonReader, JsonSerializer, DeserializeResult> Deserializer { get; }
 
 		public UnionConverter(
-			Type unionType, Action<JsonWriter, object, JsonSerializer> serializer,
+			Type unionType, Action<JsonWriter, IUnion, JsonSerializer> serializer,
 			Func<JsonReader, JsonSerializer, DeserializeResult> deserializer)
 		{
 			UnionType = unionType;

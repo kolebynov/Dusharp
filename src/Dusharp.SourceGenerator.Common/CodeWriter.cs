@@ -11,8 +11,8 @@ public sealed class CodeWriter : IDisposable
 
 	private readonly bool _writeSemicolonOnClose;
 	private readonly StringBuilder _stringBuilder;
-	private readonly int _depth;
-	private readonly string _depthStr;
+	private int _depth;
+	private string _depthStr = null!;
 
 	public CodeWriter AppendLine() => AppendLineWithoutTab(string.Empty);
 
@@ -35,6 +35,12 @@ public sealed class CodeWriter : IDisposable
 		return new CodeWriter(_stringBuilder, _depth + 1, writeSemicolonOnClose);
 	}
 
+	public IncreasedDepth IncreaseDepth()
+	{
+		SetDepth(_depth + 1);
+		return new IncreasedDepth(this);
+	}
+
 	public void Dispose()
 	{
 		if (_depth > 0)
@@ -53,9 +59,8 @@ public sealed class CodeWriter : IDisposable
 	private CodeWriter(StringBuilder stringBuilder, int depth, bool writeSemicolonOnClose)
 	{
 		_stringBuilder = stringBuilder;
-		_depth = depth;
-		_depthStr = new string('\t', depth);
 		_writeSemicolonOnClose = writeSemicolonOnClose;
+		SetDepth(depth);
 	}
 
 	private CodeWriter Append(string depthStr, string? line, bool newLine)
@@ -77,5 +82,26 @@ public sealed class CodeWriter : IDisposable
 		}
 
 		return this;
+	}
+
+	private void SetDepth(int depth)
+	{
+		_depth = depth;
+		_depthStr = new string('\t', depth);
+	}
+
+	public readonly struct IncreasedDepth : IDisposable
+	{
+		private readonly CodeWriter _codeWriter;
+
+		public IncreasedDepth(CodeWriter codeWriter)
+		{
+			_codeWriter = codeWriter;
+		}
+
+		public void Dispose()
+		{
+			_codeWriter.SetDepth(_codeWriter._depth - 1);
+		}
 	}
 }

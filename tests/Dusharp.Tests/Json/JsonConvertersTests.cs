@@ -15,6 +15,13 @@ namespace Dusharp.Tests.Json
 			Converters = { new DefaultUnionJsonConverter() },
 		};
 
+#if NET8_0_OR_GREATER
+		private static readonly JsonSerializerOptions DefaultSpecializedConverterSerializerOptions = new()
+		{
+			Converters = { new DefaultUnionJsonConverter<TestUnion<int>>(), new DefaultUnionJsonConverter<TestStructUnion<int>>() },
+		};
+#endif
+
 		private static readonly JsonSerializerOptions SpecificConverterSerializerOptions = new()
 		{
 			Converters = { new TestUnion<int>.JsonConverter(), new TestStructUnion<int>.JsonConverter() },
@@ -28,6 +35,9 @@ namespace Dusharp.Tests.Json
 		public static TheoryData<IJsonSerializer> UnionSerializers => new()
 		{
 			new StjJsonSerializer(DefaultConverterSerializerOptions),
+#if NET8_0_OR_GREATER
+			new StjJsonSerializer(DefaultSpecializedConverterSerializerOptions),
+#endif
 			new StjJsonSerializer(SpecificConverterSerializerOptions),
 			new NewtonsoftJsonSerializer(NewtonsoftDefaultConverterSerializerSettings),
 		};

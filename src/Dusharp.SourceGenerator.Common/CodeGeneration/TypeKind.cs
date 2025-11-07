@@ -1,11 +1,12 @@
 namespace Dusharp.SourceGenerator.Common.CodeGeneration;
 
-[Union]
-public partial class TypeKind
+public abstract record TypeKind
 {
-	[UnionCase]
-	public static partial TypeKind Class(bool isAbstract, bool isSealed);
+	private TypeKind()
+	{
+	}
 
-	[UnionCase]
-	public static partial TypeKind Struct(bool isReadOnly);
+	public sealed record Class(bool IsAbstract, bool IsSealed) : TypeKind;
+
+	public sealed record Struct(bool IsReadOnly) : TypeKind;
 }

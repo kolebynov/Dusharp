@@ -34,13 +34,14 @@ public sealed partial class PropertyDefinition
 		}
 	}
 
-	[Union]
-	public partial struct PropertyAccessorImpl
+	public abstract record PropertyAccessorImpl
 	{
-		[UnionCase]
-		public static partial PropertyAccessorImpl Auto();
+		private PropertyAccessorImpl()
+		{
+		}
 
-		[UnionCase]
-		public static partial PropertyAccessorImpl Bodied(Action<PropertyDefinition, CodeWriter> bodyWriter);
+		public sealed record Auto : PropertyAccessorImpl;
+
+		public sealed record Bodied(Action<PropertyDefinition, CodeWriter> BodyWriter) : PropertyAccessorImpl;
 	}
 }

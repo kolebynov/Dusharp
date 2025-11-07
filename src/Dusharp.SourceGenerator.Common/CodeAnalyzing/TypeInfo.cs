@@ -20,7 +20,7 @@ public sealed partial class TypeInfo : IEquatable<TypeInfo>
 		ContainingType = containingType;
 		Kind = kind;
 		_fullyQualifiedName = fullyQualifiedName;
-		_isReferenceType = kind.Match(_ => true, _ => false, () => true);
+		_isReferenceType = kind is TypeKind.ReferenceType;
 	}
 
 	public string GetFullyQualifiedName(bool isRefNullable) =>
@@ -79,22 +79,24 @@ public sealed partial class TypeInfo : IEquatable<TypeInfo>
 		yield return typeInfo.Name;
 	}
 
-	[Union]
-	public partial class TypeKind
+	public abstract record TypeKind
 	{
-		[UnionCase]
-		public static partial TypeKind ReferenceType(bool isInterface);
+		private TypeKind()
+		{
+		}
 
-		[UnionCase]
-		public static partial TypeKind ValueType(bool isUnmanaged);
+		public sealed record ReferenceType(bool IsInterface) : TypeKind;
 
-		[UnionCase]
-		public static partial TypeKind Unknown();
+		public sealed record ValueType(bool IsUnmanaged) : TypeKind;
+
+		public sealed record Unknown : TypeKind;
 
 		public string ToCodeString() =>
-			Match(
-				isInterface => isInterface ? "interface" : "class",
-				_ => "struct",
-				() => throw new InvalidOperationException("Unknown type"));
+			this switch
+			{
+				ReferenceType { IsInterface: var isInterface } => isInterface ? "interface" : "class",
+				ValueType =>"struct",
+				_ => throw new InvalidOperationException("Unknown type"),
+			};
 	}
 }

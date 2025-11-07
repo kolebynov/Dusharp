@@ -1,3 +1,4 @@
+using Dusharp.SourceGenerator.Common.CodeAnalyzing;
 using Dusharp.SourceGenerator.Common.Extensions;
 
 namespace Dusharp.SourceGenerator.Common.CodeGeneration;
@@ -53,20 +54,23 @@ public sealed class TypeCodeWriter
 		var declarationBuilder = new DeclarationBuilder()
 			.AddIf(typeDefinition.Accessibility != null, () => typeDefinition.Accessibility!.Value.ToCodeString());
 
-		typeDefinition.Kind
-			.Match(
-				declarationBuilder,
-				static (declarationBuilder, isAbstract, isSealed) => declarationBuilder
-					.AddIf(isAbstract, () => "abstract")
-					.AddIf(isSealed, () => "sealed"),
-				static (declarationBuilder, isReadOnly) => declarationBuilder
-					.AddIf(isReadOnly, () => "readonly"))
-			.AddIf(typeDefinition.IsPartial, () => "partial");
+		declarationBuilder = typeDefinition.Kind switch
+		{
+			TypeKind.Class { IsAbstract: var isAbstract, IsSealed: var isSealed } => declarationBuilder
+				.AddIf(isAbstract, () => "abstract")
+				.AddIf(isSealed, () => "sealed"),
+			TypeKind.Struct { IsReadOnly: var isReadOnly } =>declarationBuilder
+				.AddIf(isReadOnly, () => "readonly"),
+			_ => throw new ArgumentOutOfRangeException(nameof(typeDefinition), typeDefinition.Kind, "Invalid type kind"),
+		};
+		declarationBuilder.AddIf(typeDefinition.IsPartial, () => "partial");
 
-		typeDefinition.Kind.Match(
-			declarationBuilder,
-			static (declarationBuilder, _, _) => declarationBuilder.Add("class"),
-			static (declarationBuilder, _) => declarationBuilder.Add("struct"));
+		declarationBuilder = typeDefinition.Kind switch
+		{
+			TypeKind.Class => declarationBuilder.Add("class"),
+			TypeKind.Struct => declarationBuilder.Add("struct"),
+			_ => throw new ArgumentOutOfRangeException(nameof(typeDefinition), typeDefinition.Kind, "Invalid type kind"),
+		};
 
 		declarationBuilder
 			.Add(typeDefinition.Name)
@@ -144,14 +148,24 @@ public sealed class TypeCodeWriter
 			}
 
 			propertyBodyBlock.Append(accessorName);
-			propertyAccessor.Impl.Match(
-				() => propertyBodyBlock.AppendLine(";"),
-				bodyWriter =>
-				{
+			switch (propertyAccessor.Impl)
+			{
+				case PropertyDefinition.PropertyAccessorImpl.Auto:
+					propertyBodyBlock.AppendLine(";");
+					break;
+
+				case PropertyDefinition.PropertyAccessorImpl.Bodied { BodyWriter: var bodyWriter }:
 					propertyBodyBlock.AppendLine();
-					using var accessorBodyBlock = propertyBodyBlock.NewBlock();
-					bodyWriter(propertyDefinition, accessorBodyBlock);
-				});
+					using (var accessorBodyBlock = propertyBodyBlock.NewBlock())
+					{
+						bodyWriter(propertyDefinition, accessorBodyBlock);
+					}
+
+					break;
+
+				default:
+					throw new ArgumentOutOfRangeException(nameof(propertyAccessor), propertyAccessor.Impl, "Invalid impl");
+			}
 		}
 	}
 
@@ -199,7 +213,7 @@ public sealed class TypeCodeWriter
 		var declarationStr = new DeclarationBuilder()
 			.AddIf(methodDefinition.Accessibility != null, () => methodDefinition.Accessibility!.Value.ToCodeString()).AddIf(
 				methodDefinition.MethodModifier != null,
-				(Func<string>)(() => methodDefinition.MethodModifier!.Match(() => "static", () => "abstract", () => "virtual", () => "override")))
+				(Func<string>)(() => methodDefinition.MethodModifier!.Value.ToCodeString()))
 			.AddIf(methodDefinition.IsPartial, () => "partial")
 			.Add(methodDefinition.ReturnType.FullyQualifiedName)
 			.Add(methodDefinition.Name)
@@ -233,7 +247,7 @@ public sealed class TypeCodeWriter
 		{
 			var modifierStr = x.Modifier == null
 				? string.Empty
-				: $"{x.Modifier.Value.Match(() => "in", () => "ref", () => "out")} ";
+				: $"{x.Modifier.Value.ToCodeString()} ";
 			return $"{modifierStr}{x.TypeName} {x.Name}";
 		}));
 

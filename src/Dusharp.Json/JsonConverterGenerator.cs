@@ -4,6 +4,7 @@ using Dusharp.SourceGenerator.Common.CodeAnalyzing;
 using Dusharp.SourceGenerator.Common.CodeGeneration;
 using Dusharp.SourceGenerator.Common.Extensions;
 using Microsoft.CodeAnalysis;
+using TypeInfo = Dusharp.SourceGenerator.Common.CodeAnalyzing.TypeInfo;
 using TypeKind = Dusharp.SourceGenerator.Common.CodeGeneration.TypeKind;
 
 namespace Dusharp.Json;
@@ -37,7 +38,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 			{
 				var jsonConverterTypeDefinition = new TypeDefinition
 				{
-					Kind = TypeKind.Class(false, true),
+					Kind = new TypeKind.Class(false, true),
 					Name = "JsonConverter",
 					Accessibility = Accessibility.Public,
 					InheritedTypes = [JsonTypeInfos.JsonConverter(new TypeName(unionInfo.TypeInfo, false))],
@@ -50,7 +51,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 							Accessibility = Accessibility.Private,
 							IsStatic = true,
 							IsReadOnly = true,
-							Initializer = $"typeof({unionInfo.TypeInfo})",
+							InitializerWriter = writer => writer.Append($"typeof({unionInfo.TypeInfo})"),
 						},
 						..GetEncodedNameFields(unionInfo),
 					],
@@ -61,7 +62,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 							Name = "CanConvert",
 							ReturnType = TypeNames.Boolean,
 							Accessibility = Accessibility.Public,
-							MethodModifier = MethodModifier.Override(),
+							MethodModifier = MethodModifier.Override,
 							Parameters = [new MethodParameter(TypeNames.Type(), "typeToConvert")],
 							BodyWriter = GetCanConvertMethodBodyWriter(unionInfo),
 						},
@@ -70,10 +71,10 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 							Name = "Read",
 							ReturnType = new TypeName(unionInfo.TypeInfo, true),
 							Accessibility = Accessibility.Public,
-							MethodModifier = MethodModifier.Override(),
+							MethodModifier = MethodModifier.Override,
 							Parameters =
 							[
-								new MethodParameter(JsonTypeNames.Utf8JsonReader, "reader", MethodParameterModifier.Ref()),
+								new MethodParameter(JsonTypeNames.Utf8JsonReader, "reader", MethodParameterModifier.Ref),
 								new MethodParameter(TypeNames.Type(), "typeToConvert"),
 								new MethodParameter(JsonTypeNames.JsonSerializerOptions(), "options"),
 							],
@@ -84,7 +85,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 							Name = "Write",
 							ReturnType = TypeNames.Void,
 							Accessibility = Accessibility.Public,
-							MethodModifier = MethodModifier.Override(),
+							MethodModifier = MethodModifier.Override,
 							Parameters =
 							[
 								new MethodParameter(JsonTypeNames.Utf8JsonWriter(), "writer"),
@@ -96,14 +97,12 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 						new MethodDefinition
 						{
 							Name = "Deserialize",
-							ReturnType = new TypeName(
-								TypeInfos.ValueTuple(new TypeName(unionInfo.TypeInfo, false), TypeNames.Boolean),
-								false),
+							ReturnType = TypeNames.ValueTuple(new TypeName(unionInfo.TypeInfo, false), TypeNames.Boolean),
 							Accessibility = Accessibility.Private,
-							MethodModifier = MethodModifier.Static(),
+							MethodModifier = MethodModifier.Static,
 							Parameters =
 							[
-								new MethodParameter(JsonTypeNames.Utf8JsonReader, "reader", MethodParameterModifier.Ref()),
+								new MethodParameter(JsonTypeNames.Utf8JsonReader, "reader", MethodParameterModifier.Ref),
 								new MethodParameter(JsonTypeNames.JsonSerializerOptions(), "options"),
 							],
 							BodyWriter = GetDeserializeMethodBodyWriter(unionInfo),
@@ -113,10 +112,12 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 
 				var unionTypeDefinition = new TypeDefinition
 				{
-					Kind = unionInfo.TypeInfo.Kind.Match(
-						_ => TypeKind.Class(false, false),
-						_ => TypeKind.Struct(false),
-						() => throw new ArgumentException("Unknown union type kind", nameof(unionInfo))),
+					Kind = unionInfo.TypeInfo.Kind switch
+					{
+						TypeInfo.TypeKind.ReferenceType => new TypeKind.Class(false, false),
+						TypeInfo.TypeKind.ValueType => new TypeKind.Struct(false),
+						_ => throw new ArgumentException("Unknown union type kind", nameof(unionInfo)),
+					},
 					Name = unionInfo.TypeInfo.Name,
 					IsPartial = true,
 					NestedTypes = [jsonConverterTypeDefinition],
@@ -140,7 +141,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 			var typeToConvertParameter = def.Parameters[0].Name;
 			methodBodyBlock
 				.Append($"return {typeToConvertParameter} == {UnionTypeFieldName}")
-				.AppendLine(union.TypeInfo.Kind.IsReferenceType
+				.AppendLine(union.TypeInfo.Kind is TypeInfo.TypeKind.ReferenceType
 					? $" || {typeToConvertParameter}.BaseType == {UnionTypeFieldName};"
 					: ";");
 		};
@@ -262,7 +263,7 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 	private static FieldDefinition GetEncodedValueField(string fieldName, string value)
 	{
 		var utf8Value = Encoding.UTF8.GetBytes(value);
-		var utf8NewArrayString = $"new {TypeNames.Byte.FullyQualifiedName}[{utf8Value.Length}] {{ {string.Join(", ", utf8Value)} }}";
+		var utf8NewArrayString = $"new {TypeNames.Byte}[{utf8Value.Length}] {{ {string.Join(", ", utf8Value)} }}";
 
 		return new FieldDefinition
 		{
@@ -271,8 +272,8 @@ public sealed class JsonConverterGenerator : IUnionCodeGenerator
 			Accessibility = Accessibility.Private,
 			IsStatic = true,
 			IsReadOnly = true,
-			Initializer =
-				$"new {JsonTypeNames.JsonEncodedValue.FullyQualifiedName}({JsonTypeNames.JsonEncodedText.FullyQualifiedName}.Encode({utf8NewArrayString}), {utf8NewArrayString})",
+			InitializerWriter = writer =>
+				writer.Append($"new {JsonTypeNames.JsonEncodedValue}({JsonTypeNames.JsonEncodedText}.Encode({utf8NewArrayString}), {utf8NewArrayString})"),
 		};
 	}
 

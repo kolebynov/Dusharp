@@ -31,4 +31,10 @@ public static class UnionGenerationUtils
 
 		return $"unchecked {{ return {string.Join(" * -1521134295 + ", hashCodes)}; }}";
 	}
+
+	public static string ThrowInvalidParametersCount(UnionCaseInfo unionCase, string parametersName) =>
+		$"{typeof(ExceptionUtils).FullName}.{nameof(ExceptionUtils.ThrowInvalidParametersCount)}(\"{unionCase.Name}\", {unionCase.Parameters.Count}, {parametersName}.Length, nameof({parametersName}));";
+
+	public static string ThrowCaseDoesNotExist(string unionName, string caseNameParameter) =>
+		$"{typeof(ExceptionUtils).FullName}.{nameof(ExceptionUtils.ThrowCaseDoesNotExist)}({caseNameParameter}, \"{unionName}\", nameof({caseNameParameter}));";
 }

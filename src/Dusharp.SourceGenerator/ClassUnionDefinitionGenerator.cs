@@ -17,7 +17,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		_unionCaseNestedTypes = GetUnionCaseNestedTypes(union);
 	}
 
-	public TypeKind TypeKind => TypeKind.Class(true, false);
+	public TypeKind TypeKind => new TypeKind.Class(true, false);
 
 	public Action<MethodDefinition, CodeWriter> GetUnionCaseMethodBodyWriter(UnionCaseInfo unionCase)
 	{
@@ -50,7 +50,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 	public MethodDefinition AdjustSpecificEqualsMethod(MethodDefinition equalsMethod) =>
 		equalsMethod with
 		{
-			MethodModifier = MethodModifier.Virtual(),
+			MethodModifier = MethodModifier.Virtual,
 			BodyWriter = static (def, methodBlock) =>
 				methodBlock.AppendLine($"return {TypeInfos.Object}.ReferenceEquals(this, {def.Parameters[0].Name});"),
 		};
@@ -90,7 +90,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 	{
 		var caseClassName = $"{unionCase.Name}Case";
 		var caseTypeInfo = TypeInfo.SpecificType(union.TypeInfo.Namespace, union.TypeInfo,
-			caseClassName, TypeInfo.TypeKind.ReferenceType(false));
+			caseClassName, new TypeInfo.TypeKind.ReferenceType(false));
 
 		var fields = unionCase.Parameters.Select(caseParameter => new FieldDefinition
 		{
@@ -114,7 +114,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		var typeDefinition = new TypeDefinition
 		{
 			Accessibility = Accessibility.Private,
-			Kind = TypeKind.Class(false, true),
+			Kind = new TypeKind.Class(false, true),
 			Name = caseClassName,
 			InheritedTypes = [union.TypeInfo],
 			Fields = fields.ToArray(),
@@ -149,7 +149,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		var getHashCodeMethodDefinition = new MethodDefinition
 		{
 			Accessibility = Accessibility.Public,
-			MethodModifier = MethodModifier.Override(),
+			MethodModifier = MethodModifier.Override,
 			ReturnType = TypeNames.Int32,
 			Name = "GetHashCode",
 			BodyWriter = (_, methodBlock) =>
@@ -172,7 +172,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			new MethodDefinition
 			{
 				Accessibility = Accessibility.Public,
-				MethodModifier = MethodModifier.Override(),
+				MethodModifier = MethodModifier.Override,
 				ReturnType = TypeNames.Boolean,
 				Name = "Equals",
 				Parameters = [new MethodParameter(new TypeName(union.TypeInfo, true), "other")],
@@ -181,7 +181,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 			new MethodDefinition
 			{
 				Accessibility = Accessibility.Public,
-				MethodModifier = MethodModifier.Override(),
+				MethodModifier = MethodModifier.Override,
 				ReturnType = TypeNames.Boolean,
 				Name = "Equals",
 				Parameters = [new MethodParameter(TypeNames.Object(true), "other")],
@@ -218,7 +218,7 @@ public sealed class ClassUnionDefinitionGenerator : IUnionDefinitionGenerator
 		new()
 		{
 			Accessibility = Accessibility.Public,
-			MethodModifier = MethodModifier.Override(),
+			MethodModifier = MethodModifier.Override,
 			ReturnType = TypeNames.String(),
 			Name = "ToString",
 			BodyWriter = (_, methodBlock) => methodBlock
